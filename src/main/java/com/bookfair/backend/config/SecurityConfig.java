@@ -19,19 +19,19 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.bookfair.backend.config.filter.JwtAuthenticationFilter;
+import com.bookfair.backend.security.JwtAuthEntryPoint;
+
+import lombok.AllArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@AllArgsConstructor
 public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtFilter;
-
-    public SecurityConfig(UserDetailsService userDetailsService, JwtAuthenticationFilter jwtFilter) {
-        this.userDetailsService = userDetailsService;
-        this.jwtFilter = jwtFilter;
-    }
+    private final JwtAuthEntryPoint authEntryPoint;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -39,17 +39,11 @@ public class SecurityConfig {
         return http
                 .csrf(customizer -> customizer.disable())
                 .cors(Customizer.withDefaults())
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(authEntryPoint))
                 .authorizeHttpRequests(request -> request
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                    .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                    .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN")
-                    .requestMatchers(HttpMethod.PUT, "/api/stalls/**").hasRole("ADMIN")
-                    .requestMatchers(HttpMethod.POST, "/api/stalls/**").hasRole("ADMIN")
-                    .requestMatchers(HttpMethod.DELETE, "/api/genres/**").hasRole("ADMIN")
-                    .requestMatchers(HttpMethod.POST, "/api/genres/**").hasRole("ADMIN")
                     .requestMatchers("/api/auth/**").permitAll()
                     .anyRequest().authenticated())
-                .httpBasic(Customizer.withDefaults())
                 .sessionManagement(session -> 
                     session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
