@@ -1,8 +1,8 @@
 package com.bookfair.backend.service;
 
-import com.bookfair.backend.Model.entity.User;
-import com.bookfair.backend.Model.entity.Reservation.ReservationStatus;
 import com.bookfair.backend.dto.response.AdminDashBoardResponse;
+import com.bookfair.backend.model.User;
+import com.bookfair.backend.model.Reservation.ReservationStatus;
 import com.bookfair.backend.repository.ReservationRepository;
 import com.bookfair.backend.repository.StallRepository;
 import com.bookfair.backend.repository.UserRepository;

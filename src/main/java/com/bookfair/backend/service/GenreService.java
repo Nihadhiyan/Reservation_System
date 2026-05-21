@@ -4,9 +4,9 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.bookfair.backend.Model.entity.Genre;
 import com.bookfair.backend.dto.request.GenreRequest;
 import com.bookfair.backend.dto.response.GenreResponse;
+import com.bookfair.backend.model.Genre;
 import com.bookfair.backend.repository.GenreRepository;
 
 @Service

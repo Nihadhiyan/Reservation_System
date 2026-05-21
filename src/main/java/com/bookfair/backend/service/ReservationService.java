@@ -2,10 +2,10 @@ package com.bookfair.backend.service;
 
 
 
-import com.bookfair.backend.Model.entity.Reservation;
-import com.bookfair.backend.Model.entity.Reservation.ReservationStatus;
 import com.bookfair.backend.dto.request.ReservationRequest;
 import com.bookfair.backend.dto.response.ReservationResponse;
+import com.bookfair.backend.model.Reservation;
+import com.bookfair.backend.model.Reservation.ReservationStatus;
 import com.bookfair.backend.repository.GenreRepository;
 import com.bookfair.backend.repository.ReservationRepository;
 import com.bookfair.backend.repository.StallRepository;

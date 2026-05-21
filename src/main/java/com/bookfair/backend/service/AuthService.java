@@ -6,12 +6,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.bookfair.backend.Model.entity.User;
-import com.bookfair.backend.Model.entity.User.Role;
 import com.bookfair.backend.dto.request.LoginRequest;
 import com.bookfair.backend.dto.request.RegisterRequest;
 import com.bookfair.backend.dto.response.AuthResponse;
+import com.bookfair.backend.model.User;
+import com.bookfair.backend.model.User.Role;
 import com.bookfair.backend.repository.UserRepository;
+import com.bookfair.backend.security.JwtService;
 
 @Service
 public class AuthService {

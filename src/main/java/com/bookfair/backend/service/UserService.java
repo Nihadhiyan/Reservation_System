@@ -4,9 +4,9 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.bookfair.backend.Model.entity.User;
 import com.bookfair.backend.dto.request.UserUpdateRequest;
 import com.bookfair.backend.dto.response.UserResponse;
+import com.bookfair.backend.model.User;
 import com.bookfair.backend.repository.UserRepository;
 
 @Service

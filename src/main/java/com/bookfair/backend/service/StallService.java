@@ -4,10 +4,10 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.bookfair.backend.Model.entity.Stall;
-import com.bookfair.backend.Model.entity.Stall.StallStatus;
 import com.bookfair.backend.dto.request.StallRequest;
 import com.bookfair.backend.dto.response.StallResponse;
+import com.bookfair.backend.model.Stall;
+import com.bookfair.backend.model.Stall.StallStatus;
 import com.bookfair.backend.repository.StallRepository;
 
 @Service
