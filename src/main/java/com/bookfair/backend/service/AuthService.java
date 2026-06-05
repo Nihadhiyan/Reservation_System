@@ -4,38 +4,37 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.bookfair.backend.dto.request.LoginRequest;
-import com.bookfair.backend.dto.request.RegisterRequest;
-import com.bookfair.backend.dto.response.AuthResponse;
+import com.bookfair.backend.dto.auth.mapper.AuthMapper;
+import com.bookfair.backend.dto.auth.request.RegisterRequest;
+import com.bookfair.backend.dto.auth.response.AuthResponse;
 import com.bookfair.backend.model.User;
 import com.bookfair.backend.model.User.Role;
 import com.bookfair.backend.repository.UserRepository;
 import com.bookfair.backend.security.JwtService;
 
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final BCryptPasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final AuthMapper authMapper;
     private final JwtService jwtService;
 
-    public AuthService(UserRepository userRepository, AuthenticationManager authenticationManager, JwtService jwtService) {
-        this.userRepository = userRepository;
-        this.authenticationManager = authenticationManager;
-        this.jwtService = jwtService;
-    }
-
-    private BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder(12);
-
-
+    @Transactional
     public AuthResponse register(RegisterRequest registerRequest) {
         User user = new User();
 
         user.setUsername(registerRequest.getUsername());
         user.setEmail(registerRequest.getEmail());
-        user.setPassword(bCryptPasswordEncoder.encode(registerRequest.getPassword()));
+        user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
         user.setAddress(registerRequest.getAddress());
         user.setContactNumber(registerRequest.getContactNumber());
         user.setBusinessName(registerRequest.getBusinessName());
