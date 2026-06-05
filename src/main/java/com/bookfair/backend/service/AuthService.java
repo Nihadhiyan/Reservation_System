@@ -13,7 +13,7 @@ import com.bookfair.backend.model.User;
 import com.bookfair.backend.repository.UserRepository;
 import com.bookfair.backend.security.JwtService;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
