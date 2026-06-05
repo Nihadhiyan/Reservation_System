@@ -1,116 +1,76 @@
 package com.bookfair.backend.service;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import com.bookfair.backend.dto.request.StallRequest;
-import com.bookfair.backend.dto.response.StallResponse;
+import com.bookfair.backend.dto.venue.mapper.VenueMapper;
+import com.bookfair.backend.dto.venue.request.CreateStallRequest;
+import com.bookfair.backend.dto.venue.request.UpdateStallRequest;
+import com.bookfair.backend.dto.venue.response.StallResponse;
 import com.bookfair.backend.model.Stall;
-import com.bookfair.backend.model.Stall.StallStatus;
 import com.bookfair.backend.repository.StallRepository;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class StallService {
 
     private final StallRepository stallRepository;
+    private final VenueMapper venueMapper;
 
-    public StallService(StallRepository stallRepository) {
-        this.stallRepository = stallRepository;
+    @Transactional
+    public List<StallResponse> createStall(List<CreateStallRequest> stallRequests) {
+        List<Stall> savedStalls = stallRequests.stream().map(stallRequest -> {
+            return stallRepository.save(venueMapper.toStallFromCreateStallRequest(stallRequest));
+            }
+        ).toList();
+
+        return savedStalls.stream().map( savedStall -> {
+                return venueMapper.toStallResponse(savedStall);
+            }
+        ).toList();
     }
 
-    public List<StallResponse> getAllStalls() {
-        return stallRepository.findAll().stream()
-        .map(stall -> {
-            StallResponse stallResponse = new StallResponse();
-            stallResponse.setId(stall.getId());
-            stallResponse.setName(stall.getName());
-            stallResponse.setSize(stall.getSize().name());
-            stallResponse.setPrice(stall.getPrice());
-            stallResponse.setStatus(stall.getStatus().name());
-            stallResponse.setXCoord(stall.getXCoord());
-            stallResponse.setYCoord(stall.getYCoord());
-            return stallResponse;
-        }).toList();
-    }
-
-    public StallResponse createStall(StallRequest stallRequest) {
-        Stall stall = new Stall();
-        stall.setName(stallRequest.getName());
-        stall.setSize(Stall.StallSize.valueOf(stallRequest.getSize()));
-        stall.setPrice(stallRequest.getPrice());
-        stall.setStatus(StallStatus.valueOf(stallRequest.getStatus()));
-        stall.setXCoord(stallRequest.getXCoord());
-        stall.setYCoord(stallRequest.getYCoord());
-
-        stallRepository.save(stall);
-
-        StallResponse stallResponse = new StallResponse();
-        stallResponse.setId(stall.getId());
-        stallResponse.setName(stall.getName());
-        stallResponse.setSize(stall.getSize().name());
-        stallResponse.setPrice(stall.getPrice());
-        stallResponse.setStatus(stall.getStatus().name());
-        stallResponse.setXCoord(stall.getXCoord());
-        stallResponse.setYCoord(stall.getYCoord());
-
-       return stallResponse;
-    }
-
-    public StallResponse getStallById(Long id) {
+    public StallResponse getStallById(UUID id) {
         Stall stall = stallRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Stall not found with id: " + id));
+                .orElseThrow(() -> new IllegalArgumentException("Physical Stall not found"));
         
-        StallResponse stallResponse = new StallResponse();
-        stallResponse.setId(stall.getId());
-        stallResponse.setName(stall.getName());
-        stallResponse.setSize(stall.getSize().name());
-        stallResponse.setPrice(stall.getPrice());
-        stallResponse.setStatus(stall.getStatus().name());
-        stallResponse.setXCoord(stall.getXCoord());
-        stallResponse.setYCoord(stall.getYCoord());
-        
-        return stallResponse;
+        return venueMapper.toStallResponse(stall);
     }
 
-    public StallResponse updateStall(Long id, StallRequest stallRequest) {
+    @Transactional
+    public StallResponse updateStall(UUID id, UpdateStallRequest stallRequest) {
         Stall stall = stallRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Stall not found with id: " + id));
+            .orElseThrow(() -> new IllegalArgumentException("Physical Stall not found"));
 
-        stall.setName(stallRequest.getName());
-        stall.setSize(Stall.StallSize.valueOf(stallRequest.getSize()));
-        stall.setPrice(stallRequest.getPrice());
-        stall.setStatus(StallStatus.valueOf(stallRequest.getStatus()));
-        stall.setXCoord(stallRequest.getXCoord());
-        stall.setYCoord(stallRequest.getYCoord());
+        venueMapper.updateStallFromStallRequest(stallRequest, stall);
 
-        stallRepository.save(stall);
+        Stall updatedStall = stallRepository.save(stall);
 
-        StallResponse stallResponse = new StallResponse();
-        stallResponse.setId(stall.getId());
-        stallResponse.setName(stall.getName());
-        stallResponse.setSize(stall.getSize().name());
-        stallResponse.setPrice(stall.getPrice());
-        stallResponse.setStatus(stall.getStatus().name());
-        stallResponse.setXCoord(stall.getXCoord());
-        stallResponse.setYCoord(stall.getYCoord());
-
-        return stallResponse;
+        return venueMapper.toStallResponse(updatedStall);
     }
 
     public List<StallResponse> getAvailableStalls() {
-        return stallRepository.findByStatus(StallStatus.AVAILABLE).stream()
+        return stallRepository.findAllByActiveTrue().stream()
                 .map(stall -> {
-                    StallResponse stallResponse = new StallResponse();
-                    stallResponse.setId(stall.getId());
-                    stallResponse.setName(stall.getName());
-                    stallResponse.setSize(stall.getSize().name());
-                    stallResponse.setPrice(stall.getPrice());
-                    stallResponse.setStatus(stall.getStatus().name());
-                    stallResponse.setXCoord(stall.getXCoord());
-                    stallResponse.setYCoord(stall.getYCoord());
-                    return stallResponse;
+                    return venueMapper.toStallResponse(stall);
                 }).toList();
+    }
+
+    @Transactional
+    public void deactivateStall(List<UUID> id) {
+
+        List<Stall> stalls = stallRepository.findAllByIdAndActiveTrue(id);
+
+        for(Stall stall : stalls) {
+            stall.setActive(false);
+        }
+
+        stallRepository.saveAll(stalls);
     }
     
 }

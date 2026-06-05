@@ -1,82 +1,66 @@
 package com.bookfair.backend.service;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
-import com.bookfair.backend.dto.request.GenreRequest;
-import com.bookfair.backend.dto.response.GenreResponse;
+import com.bookfair.backend.dto.genre.mapper.GenreMapper;
+import com.bookfair.backend.dto.genre.request.CreateGenreRequest;
+import com.bookfair.backend.dto.genre.request.UpdateGenreRequest;
+import com.bookfair.backend.dto.genre.response.GenreResponse;
 import com.bookfair.backend.model.Genre;
 import com.bookfair.backend.repository.GenreRepository;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class GenreService {
 
     private final GenreRepository genreRepository;
-
-    public GenreService(GenreRepository genreRepository) {
-        this.genreRepository = genreRepository;
-    }
+    private final GenreMapper genreMapper;
 
     public List<GenreResponse> getAllGenres() {
-        return genreRepository.findAll().stream()
+        return genreRepository.findByActiveTrue().stream()
                 .map(genre -> {
-                    GenreResponse response = new GenreResponse();
-                    response.setId(genre.getId());
-                    response.setName(genre.getName());
-                    response.setColorCode(genre.getColor());
-                    return response;
+                    return genreMapper.toGenreResponse(genre);
                 })
                 .toList();
     }
 
-    public GenreResponse getGenreById(Long id) {
-        Genre genre =  genreRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Genre not found"));
+    public GenreResponse getGenreById(UUID genreId) {
+        Genre genre =  genreRepository.findByIdAndActiveTrue(genreId)
+            .orElseThrow(() -> new IllegalArgumentException("Genre not found"));
         
-        GenreResponse response = new GenreResponse();
-
-        response.setId(genre.getId());
-        response.setName(genre.getName());
-        response.setColorCode(genre.getColor());
-        return response;
+        return genreMapper.toGenreResponse(genre);
     }
 
-    public GenreResponse createGenre(GenreRequest genreRequest) {
-        Genre genre = new Genre();
+    public GenreResponse createGenre(CreateGenreRequest genreRequest) {
 
-        genre.setName(genreRequest.getName());
-        genre.setColor(genreRequest.getColorCode());
-        genreRepository.save(genre);
+        Genre savedGenre = genreRepository.save(genreMapper.toGenre(genreRequest));
 
-        GenreResponse response = new GenreResponse();
-
-        response.setId(genre.getId());
-        response.setName(genre.getName());
-        response.setColorCode(genre.getColor());
-
-        return response;
+        return genreMapper.toGenreResponse(savedGenre);
     }
 
-    public GenreResponse updateGenre(Long id, GenreRequest genreRequest) {
-        Genre genre = genreRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Genre not found"));
+    public GenreResponse updateGenre(UUID genreId, UpdateGenreRequest genreRequest) {
+        Genre genre = genreRepository.findByIdAndActiveTrue(genreId)
+            .orElseThrow(() -> new IllegalArgumentException("Genre not found"));
         
-        genre.setName(genreRequest.getName());
-        genre.setColor(genreRequest.getColorCode());
-        genreRepository.save(genre);
+        genreMapper.updateGenreFromRequest(genreRequest, genre);
 
-        GenreResponse response = new GenreResponse();
+        Genre updatedGenre = genreRepository.save(genre);   
 
-        response.setId(genre.getId());
-        response.setName(genre.getName());
-        response.setColorCode(genre.getColor());
-
-        return response;
+        return genreMapper.toGenreResponse(updatedGenre);
     }
 
-    public void deleteGenre(Long id) {
-        genreRepository.deleteById(id);
+    public void deleteGenre(UUID genreId) {
+        Genre genre = genreRepository.findByIdAndActiveTrue(genreId)
+            .orElseThrow(() -> new IllegalArgumentException("Genre not found"));
+
+        genre.setActive(false);
+
+        genreRepository.save(genre);
     }
 
     
