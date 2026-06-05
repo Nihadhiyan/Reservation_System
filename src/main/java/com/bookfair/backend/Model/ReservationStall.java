@@ -1,5 +1,6 @@
 package com.bookfair.backend.model;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -45,5 +46,6 @@ public class ReservationStall extends BaseEntity {
     private BookFairStall bookFairStall;
 
     @Column(name = "price_at_booking", nullable = false, precision = 10, scale = 2)
+    @Positive(message = "Price at booking must be positive")
     private BigDecimal priceAtBooking;
 }

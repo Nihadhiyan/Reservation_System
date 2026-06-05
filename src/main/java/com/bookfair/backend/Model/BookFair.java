@@ -1,6 +1,6 @@
 package com.bookfair.backend.model;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -43,10 +43,10 @@ public class BookFair extends BaseEntity {
     private String name;
 
     @Column(name = "start_date", nullable = false)
-    private LocalDate startDate;
+    private LocalDateTime startDateTime;
 
     @Column(name = "end_date", nullable = false)
-    private LocalDate endDate;
+    private LocalDateTime endDateTime;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

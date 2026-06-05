@@ -1,6 +1,7 @@
 package com.bookfair.backend.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -10,7 +11,7 @@ import lombok.ToString;
 
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -51,17 +52,11 @@ public class Reservation extends BaseEntity {
     @EqualsAndHashCode.Exclude
     private List<ReservationStall> reservedStalls;
 
-    @Column(name = "reservation_date", nullable = false)
-    private LocalDate date;
-
     @Column(name = "reservation_start_time", nullable = false)
-    private LocalDateTime reservationStartTime;
+    private LocalDateTime reservationStartDateTime;
 
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
-    
-    @Column(name = "reservation_time", nullable = false)
-    private String time;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -73,10 +68,14 @@ public class Reservation extends BaseEntity {
     @EqualsAndHashCode.Exclude
     private Genre genre;
 
+    @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
+    @Positive(message = "Total price must be positive")
+    private BigDecimal totalPrice;
+
     @Column(name = "qr_code_payload", columnDefinition = "TEXT")
     private String qrCodePayload; // Stores the JWT String for the scanner app
 
     public enum ReservationStatus {
-        PENDING, CONFIRMED, CANCELLED, REJECTED, REFUNDED
+        PENDING, CONFIRMED, CANCELLED, REJECTED, REFUNDED, REFUND_PENDING
     }
 }
