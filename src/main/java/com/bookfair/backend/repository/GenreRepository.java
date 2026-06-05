@@ -1,5 +1,6 @@
 package com.bookfair.backend.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,4 +14,6 @@ public interface GenreRepository extends JpaRepository<Genre, UUID> {
     boolean existsByName(String name);
 
     Optional<Genre> findByIdAndActiveTrue(UUID id);
+
+    List<Genre> findByActiveTrue();
 }

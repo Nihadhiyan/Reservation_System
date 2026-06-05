@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import com.bookfair.backend.model.BookFair;
 import com.bookfair.backend.model.BookFairStall;
 import com.bookfair.backend.model.BookFairStall.AvailabilityStatus;
 
@@ -16,6 +17,8 @@ import com.bookfair.backend.model.BookFairStall.AvailabilityStatus;
 public interface BookFairStallRepository extends JpaRepository<BookFairStall, UUID> {
 
     List<BookFairStall> findByBookFairId(UUID bookFairId);
+
+    List<BookFairStall> findByBookFair(BookFair bookFair);
 
     @Query("SELECT bfs FROM BookFairStall bfs JOIN FETCH bfs.stall WHERE bfs.bookfair.id = :bookFairId")
     List<BookFairStall> findAllByBookFairIdWithStallData(@Param("bookFairId") UUID bookFairId);

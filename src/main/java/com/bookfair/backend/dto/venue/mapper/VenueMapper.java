@@ -3,10 +3,13 @@ package com.bookfair.backend.dto.venue.mapper;
 import java.util.List;
 
 import org.mapstruct.Mapper;
+import org.mapstruct.MappingTarget;
 
 import com.bookfair.backend.dto.common.LayoutMarkerDto;
 import com.bookfair.backend.dto.common.LayoutPositionDto;
 import com.bookfair.backend.dto.config.GlobalMapperConfig;
+import com.bookfair.backend.dto.venue.request.CreateStallRequest;
+import com.bookfair.backend.dto.venue.request.UpdateStallRequest;
 import com.bookfair.backend.dto.venue.response.BuildingResponse;
 import com.bookfair.backend.dto.venue.response.FloorResponse;
 import com.bookfair.backend.dto.venue.response.HallLayoutResponse;
@@ -34,6 +37,10 @@ public interface VenueMapper {
     HallResponse toHallResponse(Hall hall);
 
     StallResponse toStallResponse(Stall stall);
+
+    Stall toStallFromCreateStallRequest(CreateStallRequest request);
+
+    Stall updateStallFromStallRequest(UpdateStallRequest request, @MappingTarget Stall stall);
 
     VenueMapResponse toVenueMapResponse(Venue venue);
 

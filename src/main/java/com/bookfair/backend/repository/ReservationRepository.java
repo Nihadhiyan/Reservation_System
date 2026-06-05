@@ -4,8 +4,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.bookfair.backend.model.Reservation;
+import com.bookfair.backend.model.User;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,6 +20,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
     List<Reservation> findByDate(LocalDate date);
     
     List<Reservation> findByUserIdAndStatus(UUID userId, Reservation.ReservationStatus status);
+
+    List<Reservation> findByUserOrderByCreatedAtDesc(User user);
     
     List<Reservation> findByStatus(Reservation.ReservationStatus status);
 
@@ -25,6 +29,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
 
     List<Reservation> findByBookFairId(UUID bookFairId);
 
-    List<Reservation> findByExpiresAtBeforeAndStatus(LocalDate expiresAt, Reservation.ReservationStatus status);
+    List<Reservation> findByExpiresAtBeforeAndStatus(LocalDateTime expiresAt, Reservation.ReservationStatus status);
 
 }

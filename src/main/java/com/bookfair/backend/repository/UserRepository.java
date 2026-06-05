@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository;
 
 import com.bookfair.backend.model.User;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,4 +23,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByUsernameAndActiveTrue(String username);
 
     Optional<User> findByUsername(String username);
+
+    List<User> findAllByActiveTrue();
 }
