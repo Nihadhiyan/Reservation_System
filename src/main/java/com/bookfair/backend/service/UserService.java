@@ -1,86 +1,66 @@
 package com.bookfair.backend.service;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
-import com.bookfair.backend.dto.request.UserUpdateRequest;
-import com.bookfair.backend.dto.response.UserResponse;
+import com.bookfair.backend.dto.reservation.mapper.ReservationMapper;
+import com.bookfair.backend.dto.reservation.response.ReservationResponse;
+import com.bookfair.backend.dto.user.mapper.UserMapper;
+import com.bookfair.backend.dto.user.request.UpdateUserRequest;
+import com.bookfair.backend.dto.user.response.UserResponse;
 import com.bookfair.backend.model.User;
+import com.bookfair.backend.repository.ReservationRepository;
 import com.bookfair.backend.repository.UserRepository;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
+    private final ReservationRepository reservationRepository;
+    private final UserMapper userMapper;
+    private final ReservationMapper reservationMapper;
 
-    public UserService(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public UserResponse getUserProfile(UUID userId) {
+        User user =  userRepository.findByUserIdAndActiveTrue(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        return userMapper.toUserResponse(user);
     }
 
-    public List<UserResponse> getAllUsers() {
-        return userRepository.findAll().stream()
-        .map(user -> {
-            UserResponse response = new UserResponse();
-            response.setId(user.getId());
-            response.setUsername(user.getUsername());
-            response.setEmail(user.getEmail());
-            response.setRole(user.getRole().name());
-            response.setBusinessName(user.getBusinessName());
-            response.setContactNumber(user.getContactNumber());
-            response.setAddress(user.getAddress());
-            return response;
-        })
-        .toList();
-    }
-
-    public User createUser(User user) {
-        return userRepository.save(user);    
-    }
-
-    public UserResponse getUserById(Long id) {
-        User user = userRepository
-        .findById(id)
-        .orElseThrow(() -> new RuntimeException("User not found"));
+    public UserResponse updateUser(UUID userId, UpdateUserRequest userUpdateRequest) {
+        User user = userRepository.findByUserIdAndActiveTrue(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
-        UserResponse response = new UserResponse();
-        response.setId(user.getId());
-        response.setUsername(user.getUsername());
-        response.setEmail(user.getEmail());
-        response.setRole(user.getRole().name());
-        response.setBusinessName(user.getBusinessName());
-        response.setContactNumber(user.getContactNumber());
-        response.setAddress(user.getAddress());
-        return response;
+        userMapper.updateUserFromRequest(userUpdateRequest, user);
+
+        User updatedUser = userRepository.save(user);
+        
+        return userMapper.toUserResponse(updatedUser);
     }
 
-    public UserResponse updateUser(Long id, UserUpdateRequest userUpdateRequest) {
-        User user = userRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("User not found"));
-        
-        user.setUsername(userUpdateRequest.getUsername());
-        user.setEmail(userUpdateRequest.getEmail());
-        user.setBusinessName(userUpdateRequest.getBusinessName());
-        user.setContactNumber(userUpdateRequest.getContactNumber());
-        user.setAddress(userUpdateRequest.getAddress());
+    public void deleteUser(UUID userId) {
+       User user = userRepository.findByUserIdAndActiveTrue(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        user.setActive(false);
 
         userRepository.save(user);
-
-        UserResponse userResponse = new UserResponse();
-        
-        userResponse.setId(user.getId());
-        userResponse.setUsername(user.getUsername());
-        userResponse.setEmail(user.getEmail());
-        userResponse.setRole(user.getRole().name());
-        userResponse.setBusinessName(user.getBusinessName());
-        userResponse.setContactNumber(user.getContactNumber());
-        userResponse.setAddress(user.getAddress());
-        
-        return userResponse;
     }
 
-    public void deleteUser(Long id) {
-       userRepository.deleteById(id);
+    public List<ReservationResponse> getUserReservations(UUID userId) {
+        User user = userRepository.findByUserIdAndActiveTrue(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+
+        return reservationRepository.findByUserOrderByCreatedAtDesc(user).stream().map(reservation -> {
+            return reservationMapper.toReservationResponse(reservation);
+        })
+        .toList();
     }
     
 }

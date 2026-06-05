@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,9 +75,7 @@ public class ReservationService {
                         ? createReservationRequest.getReservationStartDateTime()
                         : bookFair.getStartDateTime());
 
-        reservation.setExpiresAt(
-                createReservationRequest.getExpiresAt() != null ? createReservationRequest.getExpiresAt()
-                        : bookFair.getEndDateTime());
+        reservation.setExpiresAt(LocalDateTime.now().plusMinutes(15));
 
         reservation.setStatus(ReservationStatus.PENDING);
 
@@ -162,7 +161,7 @@ public class ReservationService {
                 .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
 
         if (!reservation.getStatus().equals(ReservationStatus.CONFIRMED)
-                || !reservation.getStatus().equals(ReservationStatus.PENDING)
+                && !reservation.getStatus().equals(ReservationStatus.PENDING)
             ) {
             throw new IllegalStateException("Only confirmed or pending reservations can be cancelled for a refund.");
         }
