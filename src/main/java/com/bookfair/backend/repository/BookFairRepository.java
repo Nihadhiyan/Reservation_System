@@ -2,6 +2,7 @@ package com.bookfair.backend.repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,6 +15,8 @@ import com.bookfair.backend.model.BookFair.BookFairStatus;
 public interface BookFairRepository extends JpaRepository<BookFair, UUID> {
 
     List<BookFair> findByStatusAndActiveTrue(BookFairStatus status);
+
+    Optional<BookFair> findByIdAndActiveTrue(UUID id);
 
     List<BookFair> findByStartDateBeforeAndEndDateAfter(
         LocalDate currentDate1,
