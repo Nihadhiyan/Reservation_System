@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .header { background-color: #4CAF50; color: white; padding: 10px; text-align: center; border-radius: 8px 8px 0 0; }
+        .ticket-box { text-align: center; margin-top: 20px; padding: 15px; background-color: #f9f9f9; }
+        .qr-image { border: 3px solid #333; border-radius: 10px; padding: 5px; background: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Ticket Confirmed!</h2>
+        </div>
+        <p>Hello <strong th:text="${userName}">Vendor</strong>,</p>
+        <p>Your reservation for <strong th:text="${eventName}">The Event</strong> is officially confirmed.</p>
+        
+        <div class="ticket-box">
+            <p>Please present this QR Code at the entrance:</p>
+            <img class="qr-image" th:if="${hasQrCode}" src="cid:qrCode" alt="Ticket QR Code"/>
+        </div>
+        
+        <p>Thank you for choosing us!</p>
+    </div>
+</body>
+</html>

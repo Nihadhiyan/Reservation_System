@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .header { background-color: #34495e; color: white; padding: 10px; text-align: center; border-radius: 8px 8px 0 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Cancellation Received</h2>
+        </div>
+        <p>Hello <strong th:text="${userName}">Vendor</strong>,</p>
+        <p>We have received your request to cancel your reservation for <strong th:text="${eventName}">The Event</strong>.</p>
+        
+        <p>Your cancellation is currently being processed. An administrator will review your refund request according to our cancellation policy. We will notify you as soon as the refund is approved and initiated.</p>
+        
+        <p>If you made this request in error, please contact support immediately.</p>
+    </div>
+</body>
+</html>

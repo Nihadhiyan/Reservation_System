@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .header { background-color: #f39c12; color: white; padding: 10px; text-align: center; border-radius: 8px 8px 0 0; }
+        .info-box { background-color: #fdfae6; border-left: 4px solid #f39c12; padding: 15px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Reservation Pending</h2>
+        </div>
+        <p>Hello <strong th:text="${userName}">Vendor</strong>,</p>
+        <p>We have successfully received your stall reservation request for <strong th:text="${eventName}">The Event</strong>.</p>
+        
+        <div class="info-box">
+            <p><strong>Status: Awaiting Admin Approval</strong></p>
+            <p>Your requested stalls are currently locked and reserved for you. An administrator will review your request shortly. Once approved and payment is verified, you will receive a final confirmation email with your QR ticket.</p>
+        </div>
+        
+        <p>Thank you for your patience!</p>
+    </div>
+</body>
+</html>

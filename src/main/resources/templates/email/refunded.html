@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .header { background-color: #e74c3c; color: white; padding: 10px; text-align: center; border-radius: 8px 8px 0 0; }
+        .success-text { color: #27ae60; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Refund Processed</h2>
+        </div>
+        <p>Hello <strong th:text="${userName}">Vendor</strong>,</p>
+        <p>Your cancellation for <strong th:text="${eventName}">The Event</strong> has been approved.</p>
+        
+        <p class="success-text">Your refund has been successfully initiated.</p>
+        
+        <p>Please note that it may take 3-5 business days for the funds to appear back on your original payment method, depending on your bank's processing times.</p>
+        
+        <p>We hope to see you at a future event!</p>
+    </div>
+</body>
+</html>
