@@ -6,32 +6,32 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.bookfair.backend.dto.auth.request.LoginRequest;
+import com.bookfair.backend.dto.auth.request.RegisterRequest;
+import com.bookfair.backend.dto.auth.response.AuthResponse;
 import com.bookfair.backend.service.AuthService;
-import com.bookfair.backend.dto.request.LoginRequest;
-import com.bookfair.backend.dto.request.RegisterRequest;
-import com.bookfair.backend.dto.response.AuthResponse;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequiredArgsConstructor
+@RequestMapping("/api/v1/auth")
 public class AuthController {
 
     private final AuthService authService;
 
-    public AuthController(AuthService authService) {
-        this.authService = authService;
-    }
-
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest registerRequest) {
 
-        return ResponseEntity.ok(authService.register(request));
+        return ResponseEntity.ok(authService.register(registerRequest));
 
     }
 
     @PostMapping("/login") 
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest loginRequest) {
 
-        return ResponseEntity.ok(authService.login(request));
+        return ResponseEntity.ok(authService.login(loginRequest));
 
     }
 }
