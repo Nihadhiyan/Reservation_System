@@ -2,7 +2,6 @@ package com.bookfair.backend.service;
 
 import com.bookfair.backend.dto.admin.mapper.AdminMapper;
 import com.bookfair.backend.dto.admin.response.AdminDashboardResponse;
-import com.bookfair.backend.model.Reservation;
 import com.bookfair.backend.model.Reservation.ReservationStatus;
 import com.bookfair.backend.repository.ReservationRepository;
 import com.bookfair.backend.repository.StallRepository;
@@ -12,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 import org.springframework.stereotype.Service;
 
@@ -26,16 +24,11 @@ public class AdminService {
     private final AdminMapper adminMapper;
 
     public AdminDashboardResponse getDashboardStats() {
-        long totalUsers = userRepository.findAllByActiveTrue().size();
-        long totalStalls = stallRepository.findAllByActiveTrue().size();
-        long activeReservations = reservationRepository.findByExpiresAtBeforeAndStatus(LocalDateTime.now(), ReservationStatus.CONFIRMED).size();
-        List<Reservation> reservations = reservationRepository.findByStatus(ReservationStatus.CONFIRMED);
+        long totalUsers = userRepository.countByActiveTrue();
+        long totalStalls = stallRepository.countByActiveTrue();
+        long activeReservations = reservationRepository.countByExpiresAtAfterAndStatus(LocalDateTime.now(), ReservationStatus.CONFIRMED);
 
-        BigDecimal totalRevenue = BigDecimal.ZERO;
-
-        for(Reservation reservation : reservations) {
-            totalRevenue = totalRevenue.add(reservation.getTotalPrice());
-        }
+        BigDecimal totalRevenue = reservationRepository.sumTotalPriceByStatus(ReservationStatus.CONFIRMED);
 
         return adminMapper.toAdminDashboardResponse(totalUsers, totalStalls, activeReservations, totalRevenue);
     }

@@ -21,4 +21,6 @@ public interface StallRepository extends JpaRepository<Stall, UUID> {
     List<Stall> findAllByIdInAndActiveTrue(List<UUID> stallIds);
         
     Optional<Stall> findByIdAndActiveTrue(UUID id);
+
+    long countByActiveTrue();
 }
