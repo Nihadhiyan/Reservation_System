@@ -32,9 +32,9 @@ public class ReservationController {
         return ResponseEntity.ok(reservationService.getAllReservations());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ReservationResponse> getReservationById(@PathVariable UUID id) {
-        return ResponseEntity.ok(reservationService.getReservationById(id));
+    @GetMapping("/{reservationId}")
+    public ResponseEntity<ReservationResponse> getReservationById(@PathVariable UUID reservationId) {
+        return ResponseEntity.ok(reservationService.getReservationById(reservationId));
     }
 
     @PostMapping
@@ -54,8 +54,8 @@ public class ReservationController {
     }
 
     @PostMapping("/{reservationId}/cancel")
-    public ResponseEntity<String> cancelReservation(@PathVariable UUID id) {
-        reservationService.requestCancellation(id);
+    public ResponseEntity<String> cancelReservation(@PathVariable UUID reservationId) {
+        reservationService.requestCancellation(reservationId);
         return ResponseEntity.ok("Cancellation requested. Pending admin approval for refund.");
     }
 
