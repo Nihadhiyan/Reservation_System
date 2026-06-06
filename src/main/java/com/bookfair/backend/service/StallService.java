@@ -10,6 +10,8 @@ import com.bookfair.backend.dto.venue.mapper.VenueMapper;
 import com.bookfair.backend.dto.venue.request.CreateStallRequest;
 import com.bookfair.backend.dto.venue.request.UpdateStallRequest;
 import com.bookfair.backend.dto.venue.response.StallResponse;
+import com.bookfair.backend.exception.ErrorCode;
+import com.bookfair.backend.exception.ResourceNotFoundException;
 import com.bookfair.backend.model.Stall;
 import com.bookfair.backend.repository.StallRepository;
 
@@ -24,10 +26,12 @@ public class StallService {
 
     @Transactional
     public List<StallResponse> createStall(List<CreateStallRequest> stallRequests) {
-        List<Stall> savedStalls = stallRequests.stream().map(stallRequest -> {
-            return stallRepository.save(venueMapper.toStallFromCreateStallRequest(stallRequest));
+        List<Stall> stalls = stallRequests.stream().map(stallRequest -> {
+                return venueMapper.toStallFromCreateStallRequest(stallRequest);
             }
         ).toList();
+
+        List<Stall> savedStalls = stallRepository.saveAll(stalls);
 
         return savedStalls.stream().map( savedStall -> {
                 return venueMapper.toStallResponse(savedStall);
@@ -37,7 +41,7 @@ public class StallService {
 
     public StallResponse getStallById(UUID id) {
         Stall stall = stallRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Physical Stall not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Physical Stall not found", ErrorCode.STALL_NOT_FOUND));
         
         return venueMapper.toStallResponse(stall);
     }
@@ -45,7 +49,7 @@ public class StallService {
     @Transactional
     public StallResponse updateStall(UUID id, UpdateStallRequest stallRequest) {
         Stall stall = stallRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Physical Stall not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Physical Stall not found", ErrorCode.STALL_NOT_FOUND));
 
         venueMapper.updateStallFromStallRequest(stallRequest, stall);
 

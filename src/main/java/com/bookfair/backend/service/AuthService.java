@@ -9,6 +9,9 @@ import com.bookfair.backend.dto.auth.mapper.AuthMapper;
 import com.bookfair.backend.dto.auth.request.LoginRequest;
 import com.bookfair.backend.dto.auth.request.RegisterRequest;
 import com.bookfair.backend.dto.auth.response.AuthResponse;
+import com.bookfair.backend.exception.DuplicateResourceException;
+import com.bookfair.backend.exception.ErrorCode;
+import com.bookfair.backend.exception.ResourceNotFoundException;
 import com.bookfair.backend.model.User;
 import com.bookfair.backend.repository.UserRepository;
 import com.bookfair.backend.security.JwtService;
@@ -30,11 +33,11 @@ public class AuthService {
     public AuthResponse register(RegisterRequest registerRequest) {
 
         if (userRepository.existsByUsernameAndActiveTrue(registerRequest.getUsername())) {
-            throw new IllegalArgumentException("Username is already taken");
+            throw new DuplicateResourceException("Username is already taken", ErrorCode.DUPLICATE_USERNAME);
         }
 
         if (userRepository.existsByEmailAndActiveTrue(registerRequest.getEmail())) {
-            throw new IllegalArgumentException("Email is already registered");
+            throw new DuplicateResourceException("Email is already registered", ErrorCode.DUPLICATE_EMAIL);
         }
 
         User user = authMapper.toUserFromRegisterRequest(registerRequest);
@@ -59,7 +62,7 @@ public class AuthService {
                         loginRequest.getPassword()));
 
         User user = userRepository.findByUsernameAndActiveTrue(loginRequest.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid username or password"));
+                .orElseThrow(() -> new ResourceNotFoundException("Invalid username or password", ErrorCode.USER_NOT_FOUND));
 
         String accessToken = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);

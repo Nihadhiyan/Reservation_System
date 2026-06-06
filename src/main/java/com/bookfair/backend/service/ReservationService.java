@@ -3,6 +3,11 @@ package com.bookfair.backend.service;
 import com.bookfair.backend.dto.reservation.mapper.ReservationMapper;
 import com.bookfair.backend.dto.reservation.request.CreateReservationRequest;
 import com.bookfair.backend.dto.reservation.response.ReservationResponse;
+import com.bookfair.backend.exception.BookingExpiredException;
+import com.bookfair.backend.exception.BusinessException;
+import com.bookfair.backend.exception.ErrorCode;
+import com.bookfair.backend.exception.ResourceNotFoundException;
+import com.bookfair.backend.exception.StallUnavailableException;
 import com.bookfair.backend.model.BookFair;
 import com.bookfair.backend.model.BookFairStall;
 import com.bookfair.backend.model.Reservation;
@@ -47,20 +52,31 @@ public class ReservationService {
     public ReservationResponse createReservation(CreateReservationRequest createReservationRequest) {
 
         User user = userRepository.findByIdAndActiveTrue(createReservationRequest.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("User not found or inactive"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                    "Stall not found", 
+                    ErrorCode.STALL_NOT_FOUND
+                ));
 
         BookFair bookFair = bookFairRepository.findByIdAndActiveTrue(createReservationRequest.getBookFairId())
-                .orElseThrow(() -> new IllegalArgumentException("Book Fair not found"));
+                .orElseThrow(() -> new ResourceNotFoundException (
+                    "BookFair not found", 
+                    ErrorCode.BOOKFAIR_NOT_FOUND
+                ));
 
         Genre genre = genreRepository.findByIdAndActiveTrue(createReservationRequest.getGenreId())
-                .orElseThrow(() -> new IllegalArgumentException("Genre not found"));
+                .orElseThrow(() -> new ResourceNotFoundException (
+                    "Genre not found", 
+                    ErrorCode.GENRE_NOT_FOUND
+                ));
 
         List<BookFairStall> stalls = bookFairStallRepository.findAllById(createReservationRequest.getStallIds());
 
         for (BookFairStall stall : stalls) {
             if (!stall.getStatus().name().equals("AVAILABLE")) {
-                throw new IllegalStateException(
-                        "Sorry! This stall is already booked or currently in someone else's cart. Please choose another stall.");
+                throw new StallUnavailableException(
+                    "Sorry! This stall is already booked or currently in someone else's cart. Please choose another stall.", 
+                    ErrorCode.STALL_UNAVAILABLE
+                );
             }
         }
 
@@ -120,10 +136,17 @@ public class ReservationService {
     @Transactional
     public void confirmReservation(UUID reservationId) {
         Reservation reservation = reservationRepository.findByIdAndStatus(reservationId, ReservationStatus.PENDING)
-                .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Reservation not found", ErrorCode.RESERVATION_NOT_FOUND));
+
+        if (reservation.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BookingExpiredException(
+                "Your reservation timer has expired. Please start over.", 
+                ErrorCode.BOOKING_EXPIRED
+            );
+        }
 
         if (!reservation.getStatus().equals(ReservationStatus.PENDING)) {
-            throw new IllegalStateException("Can only confirm PENDING reservations.");
+            throw new BusinessException("Can only confirm PENDING reservations.", ErrorCode.RESERVATION_FAILED);
         }
 
         reservation.setStatus(ReservationStatus.CONFIRMED);
@@ -155,11 +178,11 @@ public class ReservationService {
     @Transactional
     public void requestCancellation(UUID reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Reservation not found", ErrorCode.RESERVATION_NOT_FOUND));
 
         if (!reservation.getStatus().equals(ReservationStatus.CONFIRMED)
                 && !reservation.getStatus().equals(ReservationStatus.PENDING)) {
-            throw new IllegalStateException("Only confirmed or pending reservations can be cancelled for a refund.");
+            throw new BusinessException("Only confirmed or pending reservations can be cancelled for a refund.", ErrorCode.REFUND_FAILED);
         }
 
         reservation.setStatus(ReservationStatus.REFUND_PENDING);
@@ -181,10 +204,10 @@ public class ReservationService {
     public void approveRefund(UUID reservationId) {
         Reservation reservation = reservationRepository
                 .findByIdAndStatus(reservationId, ReservationStatus.REFUND_PENDING)
-                .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Reservation not found", ErrorCode.RESERVATION_NOT_FOUND));
 
         if (!reservation.getStatus().equals(ReservationStatus.REFUND_PENDING)) {
-            throw new IllegalStateException("Reservation is not pending a refund.");
+            throw new BusinessException("Reservation is not pending a refund.", ErrorCode.REFUND_FAILED);
         }
 
         reservation.setStatus(ReservationStatus.REFUNDED);
@@ -222,7 +245,7 @@ public class ReservationService {
     public ReservationResponse getReservationById(UUID id) {
 
         Reservation reservation = reservationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Reservation not found", ErrorCode.RESERVATION_NOT_FOUND));
 
         return reservationMapper.toReservationResponse(reservation);
     }

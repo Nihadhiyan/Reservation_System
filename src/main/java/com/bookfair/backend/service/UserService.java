@@ -4,12 +4,16 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.bookfair.backend.dto.reservation.mapper.ReservationMapper;
 import com.bookfair.backend.dto.reservation.response.ReservationResponse;
 import com.bookfair.backend.dto.user.mapper.UserMapper;
 import com.bookfair.backend.dto.user.request.UpdateUserRequest;
 import com.bookfair.backend.dto.user.response.UserResponse;
+import com.bookfair.backend.exception.DuplicateResourceException;
+import com.bookfair.backend.exception.ErrorCode;
+import com.bookfair.backend.exception.ResourceNotFoundException;
 import com.bookfair.backend.model.User;
 import com.bookfair.backend.repository.ReservationRepository;
 import com.bookfair.backend.repository.UserRepository;
@@ -27,14 +31,37 @@ public class UserService {
 
     public UserResponse getUserProfile(UUID userId) {
         User user =  userRepository.findByIdAndActiveTrue(userId)
-            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "User not found with ID: " + userId, 
+                ErrorCode.USER_NOT_FOUND
+            ));
 
         return userMapper.toUserResponse(user);
     }
 
+    @Transactional
     public UserResponse updateUser(UUID userId, UpdateUserRequest userUpdateRequest) {
         User user = userRepository.findByIdAndActiveTrue(userId)
-            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "User not found with ID: " + userId, 
+                ErrorCode.USER_NOT_FOUND
+            ));
+
+        if (
+            userUpdateRequest.getUsername() != null && 
+            !userUpdateRequest.getUsername().equals(user.getUsername()) && 
+            userRepository.existsByUsernameAndActiveTrue(userUpdateRequest.getUsername())
+        ) {
+            throw new DuplicateResourceException("Username is already taken.", ErrorCode.DUPLICATE_USERNAME);
+        }
+
+        if (userUpdateRequest.getEmail() != null && 
+            !userUpdateRequest.getEmail().equals(user.getEmail()) &&
+            userRepository.existsByEmailAndActiveTrue(userUpdateRequest.getEmail())
+        ) {
+            
+            throw new DuplicateResourceException("That email is already in use by another account.", ErrorCode.DUPLICATE_EMAIL);
+        }
         
         userMapper.updateUserFromRequest(userUpdateRequest, user);
 
@@ -45,7 +72,10 @@ public class UserService {
 
     public void deleteUser(UUID userId) {
        User user = userRepository.findByIdAndActiveTrue(userId)
-            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "User not found with ID: " + userId, 
+                ErrorCode.USER_NOT_FOUND
+            ));
 
         user.setActive(false);
 
@@ -54,7 +84,10 @@ public class UserService {
 
     public List<ReservationResponse> getUserReservations(UUID userId) {
         User user = userRepository.findByIdAndActiveTrue(userId)
-            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "User not found with ID: " + userId, 
+                ErrorCode.USER_NOT_FOUND
+            ));
         
 
         return reservationRepository.findByUserOrderByCreatedAtDesc(user).stream().map(reservation -> {

@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import com.bookfair.backend.dto.bookfair.mapper.BookFairMapper;
 import com.bookfair.backend.dto.bookfair.response.BookFairResponse;
 import com.bookfair.backend.dto.bookfair.response.BookFairStallResponse;
+import com.bookfair.backend.exception.ErrorCode;
+import com.bookfair.backend.exception.ResourceNotFoundException;
 import com.bookfair.backend.model.BookFair;
 import com.bookfair.backend.model.BookFair.BookFairStatus;
 import com.bookfair.backend.repository.BookFairRepository;
@@ -32,7 +34,7 @@ public class BookFairService {
 
     public List<BookFairStallResponse> getStallsForEvent(UUID bookFairId) {
         BookFair bookFair = bookFairRepository.findByIdAndActiveTrue(bookFairId)
-            .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Book fair event not found", ErrorCode.BOOKFAIR_NOT_FOUND));
 
         return bookFairStallRepository.findByBookFair(bookFair).stream().map(bookFairStall -> {
             return bookFairMapper.toBookFairStallResponse(bookFairStall);
