@@ -34,7 +34,7 @@ public class AdminService {
         BigDecimal totalRevenue = BigDecimal.ZERO;
 
         for(Reservation reservation : reservations) {
-            totalRevenue.add(reservation.getTotalPrice());
+            totalRevenue = totalRevenue.add(reservation.getTotalPrice());
         }
 
         return adminMapper.toAdminDashboardResponse(totalUsers, totalStalls, activeReservations, totalRevenue);
