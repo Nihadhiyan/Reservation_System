@@ -78,8 +78,6 @@ public class ReservationService {
 
         reservation.setStatus(ReservationStatus.PENDING);
 
-        BigDecimal finalPrice = BigDecimal.ZERO;
-
         List<ReservationStall> reservationStalls = stalls.stream()
                 .map(s -> {
 
@@ -90,13 +88,15 @@ public class ReservationService {
                     rs.setReservation(reservation);
                     rs.setPriceAtBooking(pricingEngineService.calculateFinalPrice(s));
 
-                    finalPrice.add(rs.getPriceAtBooking());
-
                     return rs;
                 })
                 .toList();
 
-        reservation.setTotalPrice(finalPrice);
+                BigDecimal totalPrice = reservationStalls.stream()
+                    .map(ReservationStall::getPriceAtBooking)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        reservation.setTotalPrice(totalPrice);
         reservation.setReservedStalls(reservationStalls);
 
         bookFairStallRepository.saveAll(stalls);
