@@ -1,6 +1,7 @@
 package com.bookfair.backend.service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,8 @@ public class ReservationCleanupService {
 
         log.info("Found {} expired reservations. Releasing stalls back to the public...", expiredReservations.size());
 
+        List<BookFairStall> stallsToRelease = new ArrayList<>();
+
         for (Reservation reservation : expiredReservations) {
 
             reservation.setStatus(ReservationStatus.CANCELLED);
@@ -47,12 +50,17 @@ public class ReservationCleanupService {
             for (ReservationStall rs : reservation.getReservedStalls()) {
                 BookFairStall bookFairStall = rs.getBookFairStall();
                 bookFairStall.setStatus(AvailabilityStatus.AVAILABLE);
-                bookFairStallRepository.save(bookFairStall);
+                stallsToRelease.add(bookFairStall);
             }
+        }
 
-            reservationRepository.save(reservation);
-            log.info("Released stalls for expired Reservation ID: {}", reservation.getId());
+        bookFairStallRepository.saveAll(stallsToRelease);
+        reservationRepository.saveAll(expiredReservations);
 
+        log.info("Successfully released {} stalls from {} expired reservations.", stallsToRelease.size(), expiredReservations.size());
+
+        for (Reservation reservation : expiredReservations) {
+            
             Map<String, Object> emailData = new HashMap<>();
             emailData.put("userName", reservation.getUser().getUsername());
             emailData.put("eventName", reservation.getBookFair().getName());
@@ -65,7 +73,6 @@ public class ReservationCleanupService {
                 null
             );
         }
-
 
     }
 }

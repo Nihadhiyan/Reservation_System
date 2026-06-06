@@ -12,6 +12,10 @@ import com.bookfair.backend.model.Stall.StallType;
 public class PricingEngineService {
     public BigDecimal calculateFinalPrice(BookFairStall bookFairStall) {
         
+        if (bookFairStall == null) {
+            return BigDecimal.ZERO;
+        }
+
         if(bookFairStall.getManualOverridePrice() != null && 
            bookFairStall.getManualOverridePrice().compareTo(BigDecimal.ZERO) > 0) {
             
@@ -19,13 +23,14 @@ public class PricingEngineService {
 
         }
 
-        BigDecimal basePrice = bookFairStall.getBasePrice();
+        BigDecimal basePrice = bookFairStall.getBasePrice() != null 
+            ? bookFairStall.getBasePrice()
+            : BigDecimal.ZERO;
 
-        if (basePrice == null) {
-            basePrice = BigDecimal.ZERO;
-        }
-
-        StallType stallType = bookFairStall.getStall().getStallType();
+        StallType stallType = (bookFairStall.getStall() != null && bookFairStall.getStall().getStallType() != null)
+            ? bookFairStall.getStall().getStallType()
+            : StallType.STANDARD;
+        
         BigDecimal multiplier = getMultiplierForStallType(stallType);
 
         return basePrice.multiply(multiplier).setScale(2, RoundingMode.HALF_UP);
@@ -33,6 +38,7 @@ public class PricingEngineService {
     }
 
     private BigDecimal getMultiplierForStallType(StallType stallType) {
+
         return switch (stallType) {
             case SPONSOR -> new BigDecimal("2.00"); // 100% markup (Double the base price)
             case PREMIUM -> new BigDecimal("1.50"); // 50% markup
@@ -48,6 +54,6 @@ public class PricingEngineService {
             return 0L;
         }
 
-        return finalPrice.multiply(new BigDecimal(100)).longValueExact();
+        return finalPrice.multiply(new BigDecimal("100")).longValueExact();
     }
 }

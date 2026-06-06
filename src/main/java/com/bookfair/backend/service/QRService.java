@@ -5,6 +5,8 @@ import java.util.Base64;
 
 import org.springframework.stereotype.Service;
 
+import com.bookfair.backend.exception.BusinessException;
+import com.bookfair.backend.exception.ErrorCode;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
@@ -23,7 +25,11 @@ public class QRService {
             return Base64.getEncoder().encodeToString(outputStream.toByteArray());
 
         } catch (Exception e) {
-            throw new RuntimeException("QR Generation Failed", e);
+            throw new BusinessException(
+                "An error occurred while generating the reservation QR code.", 
+                e,
+                ErrorCode.QR_GENERATION_FAILED
+            );
         } 
     }
 }
