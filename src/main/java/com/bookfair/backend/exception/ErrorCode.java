@@ -1,0 +1,28 @@
+package com.bookfair.backend.exception;
+
+public enum ErrorCode {
+        USER_NOT_FOUND,
+        USER_DISABLED,
+        USER_LOCKED,
+        VENUE_NOT_FOUND,
+        STALL_NOT_FOUND,
+
+        DUPLICATE_USERNAME,
+        DUPLICATE_EMAIL,
+
+        UNAUTHORIZED,
+        FORBIDDEN,
+
+        STALL_UNAVAILABLE,
+        PAYMENT_FAILED,
+        PAYMENT_TIMEOUT,
+        PAYMENT_DECLINED,
+        RESERVATION_FAILED,
+        BOOKING_EXPIRED,
+
+        FILE_UPLOAD_FAILED,
+
+        VALIDATION_ERROR,
+        DATABASE_ERROR,
+        INTERNAL_SERVER_ERROR
+}
