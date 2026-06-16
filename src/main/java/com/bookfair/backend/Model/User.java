@@ -36,6 +36,9 @@ public class User extends BaseEntity implements Serializable {
     @Email(message = "Email should be valid")
     private String email;
 
+    @Column(name = "email_verified", nullable = false)
+    private Boolean emailVerified = false;
+
     @Column(nullable = false)
     @NotBlank(message = "Password is required")
     @JsonIgnore
