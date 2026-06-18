@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import com.bookfair.backend.model.Reservation;
 import com.bookfair.backend.model.Reservation.ReservationStatus;
 
-import io.lettuce.core.dynamic.annotation.Param;
+import org.springframework.data.repository.query.Param;
 
 import com.bookfair.backend.model.User;
 
