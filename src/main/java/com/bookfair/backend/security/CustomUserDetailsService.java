@@ -55,12 +55,15 @@ public class CustomUserDetailsService implements UserDetailsService {
         @CacheEvict(value = "userDetails", key = "#user.username"),
         @CacheEvict(value = "userDetailsById", key = "#user.id")
     })
-    public void evictUserDetails(String username) {
+    public void evictUserDetails(User user) {
         
         /**
-         * This method is used to evict the cached user details.
-         * Call this method from your UserService whenever an Admin bans/deactivates a vendor!
-         * It instantly deletes their cached profile, forcing their next API request to fail.
+         * Evicts cached user details after account changes such as:
+         * - deactivation
+         * - reactivation
+         * - role changes
+         * - password changes
+         * - username changes
         */
        
     }
