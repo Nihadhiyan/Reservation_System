@@ -25,6 +25,7 @@ import com.bookfair.backend.model.User;
 import com.bookfair.backend.model.User.Role;
 import com.bookfair.backend.repository.ReservationRepository;
 import com.bookfair.backend.repository.UserRepository;
+import com.bookfair.backend.security.CustomUserDetailsService;
 import com.bookfair.backend.security.CustomUserPrincipal;
 
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class UserService {
     private final ReservationRepository reservationRepository;
     private final UserMapper userMapper;
     private final ReservationMapper reservationMapper;
+    private final CustomUserDetailsService userDetailsService;
 
     @Transactional(readOnly = true)
     public UserResponse getUserProfile(UUID userId) {
@@ -84,6 +86,8 @@ public class UserService {
 
         User updatedUser = userRepository.save(user);
 
+        userDetailsService.evictUserDetails(updatedUser);
+
         return userMapper.toUserResponse(updatedUser);
     }
 
@@ -103,6 +107,9 @@ public class UserService {
         user.getDeletionAudit().setDeletedAt(LocalDateTime.now());
 
         userRepository.save(user);
+
+        userDetailsService.evictUserDetails(user);
+
     }
 
     @Transactional
@@ -123,6 +130,9 @@ public class UserService {
         user.getDeletionAudit().setDeletedAt(LocalDateTime.now());
 
         userRepository.save(user);
+
+        userDetailsService.evictUserDetails(user);
+
     }
 
     @Transactional(readOnly = true)
@@ -179,6 +189,8 @@ public class UserService {
 
         userRepository.save(user);
 
+        userDetailsService.evictUserDetails(user);
+
     }
 
     private UUID getCurrentUserId() {
@@ -188,7 +200,10 @@ public class UserService {
             return principal.getId();
         }
 
-        throw new IllegalStateException("Unable to resolve current user");
+        throw new BusinessException(
+            "Unable to resolve current user",
+            ErrorCode.UNAUTHORIZED
+        );
     }
 
 }
