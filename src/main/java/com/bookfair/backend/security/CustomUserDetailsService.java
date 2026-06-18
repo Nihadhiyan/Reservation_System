@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -35,6 +36,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         return new CustomUserPrincipal(user);
     }
 
+    @Cacheable(value = "userDetailsById", key = "#id")
     public UserDetails loadUserById(UUID id) {
         User user = userRepository
         .findById(id)
@@ -49,7 +51,10 @@ public class CustomUserDetailsService implements UserDetailsService {
 
 
 
-    @CacheEvict(value = "userDetails", key = "#username")
+    @Caching(evict = {
+        @CacheEvict(value = "userDetails", key = "#user.username"),
+        @CacheEvict(value = "userDetailsById", key = "#user.id")
+    })
     public void evictUserDetails(String username) {
         
         /**
