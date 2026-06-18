@@ -60,6 +60,9 @@ public class User extends BaseEntity implements Serializable {
     @Column(name = "active", nullable = false)
     private Boolean active = true;
 
+    @Embedded
+    private DeletionAudit deletionAudit;
+
     public enum Role {
         ADMIN, VENDOR, EMPLOYEE
     }
