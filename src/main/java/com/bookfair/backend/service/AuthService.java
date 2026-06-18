@@ -19,6 +19,7 @@ import com.bookfair.backend.dto.auth.request.LoginRequest;
 import com.bookfair.backend.dto.auth.request.RefreshTokenRequest;
 import com.bookfair.backend.dto.auth.request.RegisterRequest;
 import com.bookfair.backend.dto.auth.request.ResetPasswordRequest;
+import com.bookfair.backend.dto.auth.request.VerifyEmailRequest;
 import com.bookfair.backend.dto.auth.response.AuthResponse;
 import com.bookfair.backend.dto.user.request.ChangePasswordRequest;
 import com.bookfair.backend.exception.BusinessException;
@@ -222,7 +223,10 @@ public class AuthService {
     }
 
     @Transactional
-    public void verifyEmail(String verificationToken) {
+    public void verifyEmail(VerifyEmailRequest verifyEmailRequest) {
+
+        String verificationToken = verifyEmailRequest.getToken();
+
         UUID userId = jwtService.extractUserId(verificationToken);
 
         UserDetails userDetails = userDetailsService.loadUserById(userId);
