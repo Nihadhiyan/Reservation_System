@@ -52,10 +52,10 @@ public class CustomUserDetailsService implements UserDetailsService {
 
 
     @Caching(evict = {
-        @CacheEvict(value = "userDetails", key = "#user.username"),
-        @CacheEvict(value = "userDetailsById", key = "#user.id")
+        @CacheEvict(value = "userDetails", key = "#username"),
+        @CacheEvict(value = "userDetailsById", key = "#userId")
     })
-    public void evictUserDetails(User user) {
+    public void evictUserDetails(UUID userId, String username) {
         
         /**
          * Evicts cached user details after account changes such as:
