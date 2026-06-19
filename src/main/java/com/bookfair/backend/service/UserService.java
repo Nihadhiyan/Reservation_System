@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -17,15 +18,16 @@ import com.bookfair.backend.dto.user.mapper.UserMapper;
 import com.bookfair.backend.dto.user.request.UpdateUserRequest;
 import com.bookfair.backend.dto.user.request.UpdateUserRoleRequest;
 import com.bookfair.backend.dto.user.response.UserResponse;
+import com.bookfair.backend.event.UserUpdatedEvent;
 import com.bookfair.backend.exception.BusinessException;
 import com.bookfair.backend.exception.DuplicateResourceException;
 import com.bookfair.backend.exception.ErrorCode;
 import com.bookfair.backend.exception.ResourceNotFoundException;
+import com.bookfair.backend.model.DeletionAudit;
 import com.bookfair.backend.model.User;
 import com.bookfair.backend.model.User.Role;
 import com.bookfair.backend.repository.ReservationRepository;
 import com.bookfair.backend.repository.UserRepository;
-import com.bookfair.backend.security.CustomUserDetailsService;
 import com.bookfair.backend.security.CustomUserPrincipal;
 
 import lombok.RequiredArgsConstructor;
@@ -38,7 +40,7 @@ public class UserService {
     private final ReservationRepository reservationRepository;
     private final UserMapper userMapper;
     private final ReservationMapper reservationMapper;
-    private final CustomUserDetailsService userDetailsService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public UserResponse getUserProfile(UUID userId) {
@@ -86,7 +88,7 @@ public class UserService {
 
         User updatedUser = userRepository.save(user);
 
-        userDetailsService.evictUserDetails(updatedUser);
+        eventPublisher.publishEvent(new UserUpdatedEvent(user.getId(), user.getUsername()));
 
         return userMapper.toUserResponse(updatedUser);
     }
@@ -103,12 +105,11 @@ public class UserService {
         }
 
         user.setActive(false);
-        user.getDeletionAudit().setDeletedBy(getCurrentUserId());
-        user.getDeletionAudit().setDeletedAt(LocalDateTime.now());
+        user.setDeletionAudit(new DeletionAudit(LocalDateTime.now(), getCurrentUserId()));
 
         userRepository.save(user);
 
-        userDetailsService.evictUserDetails(user);
+        eventPublisher.publishEvent(new UserUpdatedEvent(user.getId(), user.getUsername()));
 
     }
 
@@ -126,12 +127,11 @@ public class UserService {
         }
 
         user.setActive(false);
-        user.getDeletionAudit().setDeletedBy(getCurrentUserId());
-        user.getDeletionAudit().setDeletedAt(LocalDateTime.now());
+        user.setDeletionAudit(new DeletionAudit(LocalDateTime.now(), getCurrentUserId()));
 
         userRepository.save(user);
 
-        userDetailsService.evictUserDetails(user);
+        eventPublisher.publishEvent(new UserUpdatedEvent(user.getId(), user.getUsername()));
 
     }
 
@@ -189,7 +189,7 @@ public class UserService {
 
         userRepository.save(user);
 
-        userDetailsService.evictUserDetails(user);
+        eventPublisher.publishEvent(new UserUpdatedEvent(user.getId(), user.getUsername()));
 
     }
 
