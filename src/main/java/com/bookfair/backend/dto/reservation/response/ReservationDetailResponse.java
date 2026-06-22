@@ -29,4 +29,8 @@ public class ReservationDetailResponse {
     private String status;
     private BigDecimal totalAmount;
     private List<ReservationStallResponse> stalls;
+    private UUID organizationId;
+    private String organizationName;
+    private UUID reservationCreatedByUserId;
+    private String reservationCreatedByUsername;
 }
