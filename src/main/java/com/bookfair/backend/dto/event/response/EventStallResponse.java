@@ -1,4 +1,4 @@
-package com.bookfair.backend.dto.bookfair.response;
+package com.bookfair.backend.dto.event.response;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -11,9 +11,9 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class BookFairStallResponse {
+public class EventStallResponse {
     private UUID id;
-    private UUID bookFairId;
+    private UUID eventId;
     private UUID stallId;
     private String stallName;
     private String hallName;

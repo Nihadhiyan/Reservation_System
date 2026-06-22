@@ -12,6 +12,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Min;
@@ -104,5 +108,24 @@ public class Venue extends BaseEntity {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<Building> buildings;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_organization_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Organization owner;
+
+    @ManyToMany
+    @JoinTable(
+        name = "venue_partners",
+        joinColumns = @JoinColumn(name = "venue_id"),
+        inverseJoinColumns = @JoinColumn(name = "organization_id")
+    )
+    private List<Organization> partners;
+
+    @OneToMany(mappedBy = "venue", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Event> events;
 
 }

@@ -6,13 +6,15 @@ public enum ErrorCode {
         USER_LOCKED,
         VENUE_NOT_FOUND,
         STALL_NOT_FOUND,
-        BOOKFAIR_NOT_FOUND,
+        EVENT_NOT_FOUND,
         GENRE_NOT_FOUND,
         HALL_NOT_FOUND,
         RESERVATION_NOT_FOUND,
+        ORGANIZATION_NOT_FOUND,
 
         DUPLICATE_USERNAME,
         DUPLICATE_EMAIL,
+        DUPLICATE_ORGANIZATION_NAME,
 
         UNAUTHORIZED,
         FORBIDDEN,
@@ -32,5 +34,5 @@ public enum ErrorCode {
         VALIDATION_ERROR,
         DATABASE_ERROR,
         INTERNAL_SERVER_ERROR, 
-        BUSINESS_RULE_VIOLATION
+        BUSINESS_RULE_VIOLATION, 
 }

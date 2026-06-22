@@ -10,12 +10,12 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.bookfair.backend.model.BookFairStall;
+import com.bookfair.backend.model.EventStall;
 import com.bookfair.backend.model.Reservation;
 import com.bookfair.backend.model.ReservationStall;
-import com.bookfair.backend.model.BookFairStall.AvailabilityStatus;
+import com.bookfair.backend.model.EventStall.AvailabilityStatus;
 import com.bookfair.backend.model.Reservation.ReservationStatus;
-import com.bookfair.backend.repository.BookFairStallRepository;
+import com.bookfair.backend.repository.EventStallRepository;
 import com.bookfair.backend.repository.ReservationRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ReservationCleanupService {
     private final ReservationRepository reservationRepository;
-    private final BookFairStallRepository bookFairStallRepository;
+    private final EventStallRepository eventStallRepository;
     private final EmailService emailService;
 
     @Scheduled(fixedRate = 60000)
@@ -41,20 +41,20 @@ public class ReservationCleanupService {
 
         log.info("Found {} expired reservations. Releasing stalls back to the public...", expiredReservations.size());
 
-        List<BookFairStall> stallsToRelease = new ArrayList<>();
+        List<EventStall> stallsToRelease = new ArrayList<>();
 
         for (Reservation reservation : expiredReservations) {
 
             reservation.setStatus(ReservationStatus.CANCELLED);
 
             for (ReservationStall rs : reservation.getReservedStalls()) {
-                BookFairStall bookFairStall = rs.getBookFairStall();
-                bookFairStall.setStatus(AvailabilityStatus.AVAILABLE);
-                stallsToRelease.add(bookFairStall);
+                EventStall eventStall = rs.getEventStall();
+                eventStall.setStatus(AvailabilityStatus.AVAILABLE);
+                stallsToRelease.add(eventStall);
             }
         }
 
-        bookFairStallRepository.saveAll(stallsToRelease);
+        eventStallRepository.saveAll(stallsToRelease);
         reservationRepository.saveAll(expiredReservations);
 
         log.info("Successfully released {} stalls from {} expired reservations.", stallsToRelease.size(), expiredReservations.size());
@@ -63,7 +63,7 @@ public class ReservationCleanupService {
             
             Map<String, Object> emailData = new HashMap<>();
             emailData.put("userName", reservation.getUser().getUsername());
-            emailData.put("eventName", reservation.getBookFair().getName());
+            emailData.put("eventName", reservation.getEvent().getName());
 
             emailService.sendEmail(
                 reservation.getUser().getEmail(), 

@@ -1,6 +1,9 @@
 package com.bookfair.backend.dto.user.response;
 
 import java.util.UUID;
+
+import com.bookfair.backend.dto.common.SimpleOrganizationDto;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,6 +20,5 @@ public class UserResponse {
     private String role;
     private String contactNumber;
     private String address;
-    private String businessName;
-
+    private SimpleOrganizationDto organization;
 }

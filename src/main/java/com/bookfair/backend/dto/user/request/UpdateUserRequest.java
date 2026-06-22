@@ -22,24 +22,11 @@ public class UpdateUserRequest {
     @NotBlank(message = "Email is required")
     private String email;
 
-    @NotBlank(message = "Business name is required")
-    private String businessName;
-
     @NotBlank(message = "Contact number is required")
     @Pattern(regexp = "^\\+?[1-9]\\d{9,14}$", message = "Invalid contact number format")
     private String contactNumber;
 
     @NotBlank(message = "Address is required")
     private String address;
-
-
-
-
-
-
-
-
-
-
 
 }

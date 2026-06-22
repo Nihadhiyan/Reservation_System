@@ -1,6 +1,10 @@
 package com.bookfair.backend.dto.venue.response;
 
+import java.util.List;
 import java.util.UUID;
+
+import com.bookfair.backend.dto.common.SimpleOrganizationDto;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -29,5 +33,7 @@ public class VenueResponse {
     private Double totalSquareFootage;
     private Boolean parkingAvailable;
     private Boolean foodCourtAvailable;
+    private SimpleOrganizationDto owner;
+    private List<SimpleOrganizationDto> partners;
     private Boolean active;
 }

@@ -20,7 +20,7 @@ import java.util.UUID;
     name = "reservations",
     indexes = {
         @Index(name = "idx_reservation_user", columnList = "user_id"),
-        @Index(name = "idx_reservation_bookfair", columnList = "book_fair_id"),
+        @Index(name = "idx_reservation_event", columnList = "event_id"),
         @Index(name = "idx_reservation_expires", columnList = "expires_at"),
         @Index(name = "idx_reservation_status", columnList = "status")
     }
@@ -42,10 +42,10 @@ public class Reservation extends BaseEntity {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "book_fair_id", nullable = false)
+    @JoinColumn(name = "event_id", nullable = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private BookFair bookFair;
+    private Event event;
 
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude

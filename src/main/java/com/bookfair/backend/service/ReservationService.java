@@ -8,16 +8,16 @@ import com.bookfair.backend.exception.BusinessException;
 import com.bookfair.backend.exception.ErrorCode;
 import com.bookfair.backend.exception.ResourceNotFoundException;
 import com.bookfair.backend.exception.StallUnavailableException;
-import com.bookfair.backend.model.BookFair;
-import com.bookfair.backend.model.BookFairStall;
 import com.bookfair.backend.model.Reservation;
 import com.bookfair.backend.model.Reservation.ReservationStatus;
 import com.bookfair.backend.model.ReservationStall;
 import com.bookfair.backend.model.User;
-import com.bookfair.backend.model.BookFairStall.AvailabilityStatus;
+import com.bookfair.backend.model.EventStall.AvailabilityStatus;
+import com.bookfair.backend.model.Event;
+import com.bookfair.backend.model.EventStall;
 import com.bookfair.backend.model.Genre;
-import com.bookfair.backend.repository.BookFairRepository;
-import com.bookfair.backend.repository.BookFairStallRepository;
+import com.bookfair.backend.repository.EventRepository;
+import com.bookfair.backend.repository.EventStallRepository;
 import com.bookfair.backend.repository.GenreRepository;
 import com.bookfair.backend.repository.ReservationRepository;
 import com.bookfair.backend.repository.UserRepository;
@@ -40,8 +40,8 @@ public class ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
-    private final BookFairStallRepository bookFairStallRepository;
-    private final BookFairRepository bookFairRepository;
+    private final EventStallRepository eventStallRepository;
+    private final EventRepository eventRepository;
     private final QRService qrCodeService;
     private final EmailService emailService;
     private final GenreRepository genreRepository;
@@ -53,14 +53,14 @@ public class ReservationService {
 
         User user = userRepository.findByIdAndActiveTrue(createReservationRequest.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                    "Stall not found", 
-                    ErrorCode.STALL_NOT_FOUND
+                    "User not found", 
+                    ErrorCode.USER_NOT_FOUND
                 ));
 
-        BookFair bookFair = bookFairRepository.findByIdAndActiveTrue(createReservationRequest.getBookFairId())
+        Event event = eventRepository.findByIdAndActiveTrue(createReservationRequest.getEventId())
                 .orElseThrow(() -> new ResourceNotFoundException (
-                    "BookFair not found", 
-                    ErrorCode.BOOKFAIR_NOT_FOUND
+                    "event not found", 
+                    ErrorCode.EVENT_NOT_FOUND
                 ));
 
         Genre genre = genreRepository.findByIdAndActiveTrue(createReservationRequest.getGenreId())
@@ -69,9 +69,9 @@ public class ReservationService {
                     ErrorCode.GENRE_NOT_FOUND
                 ));
 
-        List<BookFairStall> stalls = bookFairStallRepository.findAllById(createReservationRequest.getStallIds());
+        List<EventStall> stalls = eventStallRepository.findAllById(createReservationRequest.getStallIds());
 
-        for (BookFairStall stall : stalls) {
+        for (EventStall stall : stalls) {
             if (!stall.getStatus().name().equals("AVAILABLE")) {
                 throw new StallUnavailableException(
                     "Sorry! This stall is already booked or currently in someone else's cart. Please choose another stall.", 
@@ -82,13 +82,13 @@ public class ReservationService {
 
         Reservation reservation = new Reservation();
         reservation.setUser(user);
-        reservation.setBookFair(bookFair);
+        reservation.setEvent(event);
         reservation.setGenre(genre);
 
         reservation.setReservationStartDateTime(
                 createReservationRequest.getReservationStartDateTime() != null
                         ? createReservationRequest.getReservationStartDateTime()
-                        : bookFair.getStartDateTime());
+                        : event.getStartDateTime());
 
         reservation.setExpiresAt(LocalDateTime.now().plusMinutes(15));
 
@@ -100,7 +100,7 @@ public class ReservationService {
                     s.setStatus(AvailabilityStatus.BLOCKED);
 
                     ReservationStall rs = new ReservationStall();
-                    rs.setBookFairStall(s);
+                    rs.setEventStall(s);
                     rs.setReservation(reservation);
                     rs.setPriceAtBooking(pricingEngineService.calculateFinalPrice(s));
 
@@ -115,12 +115,12 @@ public class ReservationService {
         reservation.setTotalPrice(totalPrice);
         reservation.setReservedStalls(reservationStalls);
 
-        bookFairStallRepository.saveAll(stalls);
+        eventStallRepository.saveAll(stalls);
         Reservation savedReservation = reservationRepository.save(reservation);
 
         Map<String, Object> emailData = new HashMap<>();
         emailData.put("userName", user.getUsername());
-        emailData.put("eventName", bookFair.getName());
+        emailData.put("eventName", event.getName());
 
         emailService.sendEmail(
                 user.getEmail(),
@@ -156,16 +156,16 @@ public class ReservationService {
         String qrCodeImage = qrCodeService.generateQRCode(qrPayload);
 
         for (ReservationStall rs : reservation.getReservedStalls()) {
-            BookFairStall stall = rs.getBookFairStall();
+            EventStall stall = rs.getEventStall();
             stall.setStatus(AvailabilityStatus.BOOKED);
-            bookFairStallRepository.save(stall);
+            eventStallRepository.save(stall);
         }
 
         reservationRepository.save(reservation);
 
         Map<String, Object> emailData = new HashMap<>();
         emailData.put("userName", reservation.getUser().getUsername());
-        emailData.put("eventName", reservation.getBookFair().getName());
+        emailData.put("eventName", reservation.getEvent().getName());
 
         emailService.sendEmail(
                 reservation.getUser().getEmail(),
@@ -190,7 +190,7 @@ public class ReservationService {
 
         Map<String, Object> emailData = new HashMap<>();
         emailData.put("userName", reservation.getUser().getUsername());
-        emailData.put("eventName", reservation.getBookFair().getName());
+        emailData.put("eventName", reservation.getEvent().getName());
 
         emailService.sendEmail(
                 reservation.getUser().getEmail(),
@@ -213,9 +213,9 @@ public class ReservationService {
         reservation.setStatus(ReservationStatus.REFUNDED);
 
         for (ReservationStall rs : reservation.getReservedStalls()) {
-            BookFairStall stall = rs.getBookFairStall();
+            EventStall stall = rs.getEventStall();
             stall.setStatus(AvailabilityStatus.AVAILABLE);
-            bookFairStallRepository.save(stall);
+            eventStallRepository.save(stall);
         }
 
         reservationRepository.save(reservation);
@@ -224,7 +224,7 @@ public class ReservationService {
 
         Map<String, Object> emailData = new HashMap<>();
         emailData.put("userName", reservation.getUser().getUsername());
-        emailData.put("eventName", reservation.getBookFair().getName());
+        emailData.put("eventName", reservation.getEvent().getName());
 
         emailService.sendEmail(
                 reservation.getUser().getEmail(),

@@ -19,9 +19,8 @@ import jakarta.validation.constraints.NotNull;
 @AllArgsConstructor
 public class CreateHallRequest {
     
+    @NotNull(message = "Floor Id is required")
     private UUID floorId;
-
-    private UUID venueId;
 
     @NotBlank(message = "Name is required")
     private String name;

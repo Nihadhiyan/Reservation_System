@@ -28,7 +28,9 @@ import com.bookfair.backend.exception.BusinessException;
 import com.bookfair.backend.exception.DuplicateResourceException;
 import com.bookfair.backend.exception.ErrorCode;
 import com.bookfair.backend.exception.ResourceNotFoundException;
+import com.bookfair.backend.model.Organization;
 import com.bookfair.backend.model.User;
+import com.bookfair.backend.repository.OrganizationRepository;
 import com.bookfair.backend.repository.UserRepository;
 import com.bookfair.backend.security.CustomUserDetailsService;
 import com.bookfair.backend.security.CustomUserPrincipal;
@@ -44,6 +46,7 @@ import lombok.extern.slf4j.Slf4j;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final OrganizationRepository organizationRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final AuthMapper authMapper;
@@ -56,6 +59,13 @@ public class AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest registerRequest) {
 
+        if (registerRequest.getRole() == User.Role.ORG_EMPLOYEE || registerRequest.getRole() == User.Role.SUPER_ADMIN) {
+            throw new BusinessException(
+                "Employees and Admins cannot register directly. Please ask your organization administrator to invite you.", 
+                ErrorCode.FORBIDDEN
+            );
+        }
+
         if (userRepository.existsByUsernameAndActiveTrue(registerRequest.getUsername())) {
             throw new DuplicateResourceException("Username is already taken", ErrorCode.DUPLICATE_USERNAME);
         }
@@ -64,9 +74,37 @@ public class AuthService {
             throw new DuplicateResourceException("Email is already registered", ErrorCode.DUPLICATE_EMAIL);
         }
 
+        
+
+        Organization savedOrganization = null;
+
+        if (registerRequest.getRole() == User.Role.ORG_ADMIN) {
+            if (registerRequest.getOrganizationName() == null || registerRequest.getOrganizationName().isBlank()) {
+                throw new BusinessException("Organization name is required for business accounts.", ErrorCode.VALIDATION_ERROR);
+            }
+
+            if (organizationRepository.existsByNameAndActiveTrue(registerRequest.getOrganizationName())) {
+                throw new DuplicateResourceException(
+                    "An organization with the name '" + registerRequest.getOrganizationName() + "' already exists. If you work here, please ask your admin for an invite.", 
+                    ErrorCode.BUSINESS_RULE_VIOLATION
+                );
+            }
+
+            Organization organization = new Organization();
+            organization.setName(registerRequest.getOrganizationName());
+            organization.setCapabilities(registerRequest.getOrganizationCapabilities());
+
+            organization.setContactNumber(registerRequest.getContactNumber());
+            organization.setBillingAddress(registerRequest.getAddress());
+            organization.setContactEmail(registerRequest.getEmail());
+
+            savedOrganization = organizationRepository.save(organization);
+        }
+
         User user = authMapper.toUserFromRegisterRequest(registerRequest);
 
         user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
+        user.setOrganization(savedOrganization);
 
         User savedUser = userRepository.save(user);
 

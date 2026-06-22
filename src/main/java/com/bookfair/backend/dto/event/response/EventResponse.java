@@ -1,7 +1,10 @@
-package com.bookfair.backend.dto.bookfair.response;
+package com.bookfair.backend.dto.event.response;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+
+import com.bookfair.backend.dto.common.SimpleOrganizationDto;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,11 +14,14 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class BookFairResponse {
+public class EventResponse {
     private UUID id;
     private String name;
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
+    private String eventType;
+    private SimpleOrganizationDto organizer;
+    private UUID venueId;
+    private LocalDateTime startDateTime;
+    private LocalDateTime endDateTime;
     private String status;
     private Boolean active;
 }

@@ -1,6 +1,7 @@
 package com.bookfair.backend.model;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 
@@ -14,6 +15,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
@@ -26,7 +29,7 @@ import lombok.ToString;
 
 @Entity
 @Table(
-    name = "book_fairs",
+    name = "events",
     indexes = {
         @Index(name = "idx_reservation_book_fair", columnList = "name"), 
         @Index(name = "idx_venue_book_fair", columnList = "venue_id")
@@ -36,7 +39,7 @@ import lombok.ToString;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class BookFair extends BaseEntity {
+public class Event extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -52,8 +55,12 @@ public class BookFair extends BaseEntity {
     private LocalDateTime endDateTime;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "event_type", nullable = false)
+    private EventType eventType;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private BookFairStatus status;
+    private EventStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "venue_id", nullable = false)
@@ -61,10 +68,35 @@ public class BookFair extends BaseEntity {
     @EqualsAndHashCode.Exclude
     private Venue venue;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organizer_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Organization organizer;
+
+    @ManyToMany
+    @JoinTable(
+        name = "event_partners",
+        joinColumns = @JoinColumn(name = "event_id"),
+        inverseJoinColumns = @JoinColumn(name = "organization_id")
+    )
+    private List<Organization> partners;
+
     @Column(name = "active", nullable = false)
     private Boolean active = true;
 
-    public enum BookFairStatus {
+    public enum EventType {
+        BOOK_FAIR,
+        TRADE_SHOW,
+        CONFERENCE,
+        EXHIBITION,
+        CONCERT,
+        FESTIVAL,
+        CORPORATE_MEETING,
+        OTHER
+    }
+
+    public enum EventStatus {
         UPCOMING,
         ONGOING,
         COMPLETED

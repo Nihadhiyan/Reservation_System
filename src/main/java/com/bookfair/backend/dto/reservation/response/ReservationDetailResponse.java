@@ -7,7 +7,7 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
-import com.bookfair.backend.dto.common.SimpleBookFairDto;
+import com.bookfair.backend.dto.common.SimpleEventDto;
 import com.bookfair.backend.dto.common.SimpleUserDto;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -21,7 +21,7 @@ import lombok.Setter;
 public class ReservationDetailResponse {
     private UUID id;
     private SimpleUserDto user;
-    private SimpleBookFairDto bookFair;
+    private SimpleEventDto event;
     private LocalDate date;
     private LocalDateTime reservationStartDateTime;
     private LocalDateTime expiresAt;

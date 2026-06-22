@@ -14,7 +14,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class PricingBreakdownResponse {
     private UUID reservationId;
-    private String bookFairName;
+    private String eventName;
     private List<StallPricingResponse> stalls;
     private BigDecimal subtotal;
     private BigDecimal discountAmount;

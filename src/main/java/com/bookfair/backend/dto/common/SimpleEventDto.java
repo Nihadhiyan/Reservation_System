@@ -11,7 +11,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class SimpleBookFairDto {
+public class SimpleEventDto {
     private UUID id;
 
     private String name;

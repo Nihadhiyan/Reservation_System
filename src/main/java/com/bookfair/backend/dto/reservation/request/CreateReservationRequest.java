@@ -19,8 +19,8 @@ public class CreateReservationRequest {
     @NotNull(message = "User id is required")
     private UUID userId;
 
-    @NotNull(message = "Book fair id is required")
-    private UUID bookFairId;
+    @NotNull(message = "Event id is required")
+    private UUID eventId;
 
     @NotEmpty(message = "At least one stall id is required")
     private List<UUID> stallIds;

@@ -48,12 +48,13 @@ public class User extends BaseEntity implements Serializable {
     @JsonIgnore
     private String password;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organization_id")
+    private Organization organization;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
-
-    @Column(name = "business_name")
-    private String businessName;
 
     @Column(name = "contact_number")
     private String contactNumber;
@@ -68,6 +69,9 @@ public class User extends BaseEntity implements Serializable {
     private DeletionAudit deletionAudit;
 
     public enum Role {
-        ADMIN, VENDOR, EMPLOYEE
+        SUPER_ADMIN,   // Platform owner
+        ORG_ADMIN,     // Business owner/manager (replaces VENDOR and ORGANIZER)
+        ORG_EMPLOYEE,  // Business staff (replaces EMPLOYEE)
+        CUSTOMER       // Standard public user (no organization needed)
     }
 }

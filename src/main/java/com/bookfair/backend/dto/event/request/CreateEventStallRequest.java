@@ -1,4 +1,4 @@
-package com.bookfair.backend.dto.bookfair.request;
+package com.bookfair.backend.dto.event.request;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -13,10 +13,10 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class CreateBookFairStallRequest {
+public class CreateEventStallRequest {
 
-    @NotBlank(message = "Book fair ID is required")
-    private UUID bookFairId;
+    @NotBlank(message = "Event ID is required")
+    private UUID eventId;
 
     @NotBlank(message = "Stall ID is required")
     private UUID stallId;

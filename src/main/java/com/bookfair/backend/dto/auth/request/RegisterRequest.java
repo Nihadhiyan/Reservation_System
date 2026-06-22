@@ -1,5 +1,10 @@
 package com.bookfair.backend.dto.auth.request;
 
+import java.util.Set;
+
+import com.bookfair.backend.model.Organization.OrganizationCapability;
+import com.bookfair.backend.model.User.Role;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -27,10 +32,11 @@ public class RegisterRequest {
     private String password;
 
     @NotBlank(message = "Role is required")
-    private String role;
+    private Role role;
 
-    @NotBlank(message = "Business name is required")   
-    private String businessName;
+    private String organizationName;
+
+    private Set<OrganizationCapability> organizationCapabilities;
 
     @NotBlank(message = "Contact number is required")
     @Pattern(regexp = "^\\+?[1-9]\\d{9,14}$", message = "Invalid contact number format")

@@ -5,30 +5,30 @@ import java.math.RoundingMode;
 
 import org.springframework.stereotype.Service;
 
-import com.bookfair.backend.model.BookFairStall;
+import com.bookfair.backend.model.EventStall;
 import com.bookfair.backend.model.Stall.StallType;
 
 @Service
 public class PricingEngineService {
-    public BigDecimal calculateFinalPrice(BookFairStall bookFairStall) {
+    public BigDecimal calculateFinalPrice(EventStall eventStall) {
         
-        if (bookFairStall == null) {
+        if (eventStall == null) {
             return BigDecimal.ZERO;
         }
 
-        if(bookFairStall.getManualOverridePrice() != null && 
-           bookFairStall.getManualOverridePrice().compareTo(BigDecimal.ZERO) > 0) {
+        if(eventStall.getManualOverridePrice() != null && 
+           eventStall.getManualOverridePrice().compareTo(BigDecimal.ZERO) > 0) {
             
-            return bookFairStall.getManualOverridePrice();
+            return eventStall.getManualOverridePrice();
 
         }
 
-        BigDecimal basePrice = bookFairStall.getBasePrice() != null 
-            ? bookFairStall.getBasePrice()
+        BigDecimal basePrice = eventStall.getBasePrice() != null 
+            ? eventStall.getBasePrice()
             : BigDecimal.ZERO;
 
-        StallType stallType = (bookFairStall.getStall() != null && bookFairStall.getStall().getStallType() != null)
-            ? bookFairStall.getStall().getStallType()
+        StallType stallType = (eventStall.getStall() != null && eventStall.getStall().getStallType() != null)
+            ? eventStall.getStall().getStallType()
             : StallType.STANDARD;
         
         BigDecimal multiplier = getMultiplierForStallType(stallType);

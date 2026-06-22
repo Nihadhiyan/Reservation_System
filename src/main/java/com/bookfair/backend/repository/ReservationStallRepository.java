@@ -13,5 +13,5 @@ public interface ReservationStallRepository extends JpaRepository<ReservationSta
 
     List<ReservationStall> findByReservationId(UUID reservationId);
 
-    boolean existsByBookFairStallId(UUID bookFairStallId);
+    boolean existsByEventStallId(UUID eventStallId);
 }

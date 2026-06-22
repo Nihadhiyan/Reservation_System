@@ -17,11 +17,11 @@ import java.util.UUID;
     name = "reservation_stalls",
      indexes = {
         @Index(name = "idx_rs_reservation", columnList = "reservation_id"),
-        @Index(name = "idx_rs_book_fair_stall", columnList = "book_fair_stall_id")
+        @Index(name = "idx_rs_event_stall", columnList = "event_stall_id")
     },
     uniqueConstraints = {
         @UniqueConstraint(
-            columnNames = {"reservation_id", "book_fair_stall_id"},
+            columnNames = {"reservation_id", "event_stall_id"},
             name = "uk_reservation_stall"
         )
     }
@@ -42,10 +42,10 @@ public class ReservationStall extends BaseEntity {
     private Reservation reservation;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "book_fair_stall_id", nullable = false)
+    @JoinColumn(name = "event_stall_id", nullable = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private BookFairStall bookFairStall;
+    private EventStall eventStall;
 
     @Column(name = "price_at_booking", nullable = false, precision = 10, scale = 2)
     @Positive(message = "Price at booking must be positive")

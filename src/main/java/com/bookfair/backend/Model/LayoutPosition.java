@@ -30,5 +30,11 @@ public class LayoutPosition {
     @Column(nullable = false)
     @Min(value = 0, message = "Height must be non-negative")
     private Integer height;
+
+    // @Column(name = "latitude", precision = 9, scale = 6)
+    // private Double latitude;
+
+    // @Column(name = "longitude", precision = 9, scale = 6)
+    // private Double longitude;
     
 }

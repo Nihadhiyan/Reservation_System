@@ -91,6 +91,7 @@ public class GlobalExceptionHandler {
                                 .body(ErrorResponse.build(HttpStatus.CONFLICT, "Database constraint violation", null, ErrorCode.DATABASE_ERROR));
         }
 
+        @ExceptionHandler(IllegalStateException.class)
         public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex) {
 
                 log.warn("Illegal state encountered: {}", ex.getMessage());

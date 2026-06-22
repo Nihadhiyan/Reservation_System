@@ -1,4 +1,4 @@
-package com.bookfair.backend.dto.bookfair.response;
+package com.bookfair.backend.dto.event.response;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -11,9 +11,10 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class BookFairSummaryResponse {
+public class EventSummaryResponse {
     private UUID id;
     private String name;
+    private String eventType;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private String status;

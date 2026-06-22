@@ -27,16 +27,16 @@ import lombok.ToString;
 
 @Entity
 @Table(
-    name = "book_fair_stalls",
+    name = "event_stalls",
     indexes = {
-        @Index(name = "idx_bfs_bookfair", columnList = "book_fair_id"),
-        @Index(name = "idx_bfs_stall", columnList = "stall_id"),
-        @Index(name = "idx_bfs_status", columnList = "status")
+        @Index(name = "idx_es_event", columnList = "event_id"),
+        @Index(name = "idx_es_stall", columnList = "stall_id"),
+        @Index(name = "idx_es_status", columnList = "status")
     },
     uniqueConstraints = {
         @UniqueConstraint(
-            columnNames = {"book_fair_id", "stall_id"},
-            name = "uk_book_fair_stall"
+            columnNames = {"event_id", "stall_id"},
+            name = "uk_event_stall"
         )
     }
 )
@@ -44,17 +44,17 @@ import lombok.ToString;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class BookFairStall extends BaseEntity {
+public class EventStall extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "book_fair_id", nullable = false)
+    @JoinColumn(name = "event_id", nullable = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private BookFair bookFair;
+    private Event event;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "stall_id", nullable = false)

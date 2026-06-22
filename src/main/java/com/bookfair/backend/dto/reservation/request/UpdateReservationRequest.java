@@ -23,7 +23,7 @@ public class UpdateReservationRequest {
     private UUID userId;
 
     @NotNull(message = "Book fair id is required")
-    private UUID bookFairId;
+    private UUID eventId;
 
     @NotEmpty(message = "At least one stall id is required")
     private List<UUID> stallIds;
