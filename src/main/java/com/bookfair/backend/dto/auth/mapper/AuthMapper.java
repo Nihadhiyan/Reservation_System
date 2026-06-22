@@ -17,6 +17,6 @@ public interface AuthMapper {
 
     @Mapping(target = "password", ignore = true) // Ignore the raw password for security
     @Mapping(target = "active", constant = "true") // Automatically set active to true
-    @Mapping(target = "role", expression = "java(User.Role.valueOf(registerRequest.getRole().toUpperCase()))")
+    @Mapping(target = "emailVerified", constant = "false") // Automatically set verified to false
     User toUserFromRegisterRequest(RegisterRequest registerRequest);
 }
