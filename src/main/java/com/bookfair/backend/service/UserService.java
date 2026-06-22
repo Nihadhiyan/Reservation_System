@@ -102,12 +102,13 @@ public class UserService {
                         "User not found with ID: " + userId,
                         ErrorCode.USER_NOT_FOUND));
 
-        User requestingUser = userRepository.findById(getCurrentUserId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found with ID: " + getCurrentUserId(),
-                        ErrorCode.USER_NOT_FOUND));
-
         UUID currentUserId = getCurrentUserId();
+
+        User requestingUser = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with ID: " + currentUserId,
+                        ErrorCode.USER_NOT_FOUND));
+        
 
         if (currentUserId.equals(userId)) { 
             throw new BusinessException(
@@ -217,7 +218,14 @@ public class UserService {
             throw new BusinessException("Cannot change the role of last Super admin", ErrorCode.FORBIDDEN);
         }
 
-        if (requestingUser.getRole() != Role.SUPER_ADMIN && requestingUser.getRole() == Role.ORG_ADMIN) {
+        if(targetUser.getRole() == Role.SUPER_ADMIN && requestingUser.getRole() != Role.SUPER_ADMIN) {
+                 throw new ForbiddenException(
+                "Cannot modify SUPER_ADMIN accounts",
+                ErrorCode.FORBIDDEN
+            );
+        }
+
+        if (requestingUser.getRole() == Role.ORG_ADMIN) {
             if (requestingUser.getOrganization() == null || targetUser.getOrganization() == null) {
                 throw new ForbiddenException("Operation not permitted: Missing organization context.", ErrorCode.FORBIDDEN);
             }
@@ -235,6 +243,13 @@ public class UserService {
                 throw new BusinessException("Cannot degrade the last ORG_ADMIN.", ErrorCode.BUSINESS_RULE_VIOLATION);
             }
         } 
+
+        if(requestingUser.getRole() == Role.ORG_ADMIN && updateUserRoleRequest.getRole() == Role.SUPER_ADMIN) {    
+            throw new ForbiddenException(
+                "ORG_ADMIN cannot assign SUPER_ADMIN role",
+                ErrorCode.FORBIDDEN
+            );
+        }
 
         if (targetUser.getRole() == updateUserRoleRequest.getRole()) {
             throw new BusinessException(
