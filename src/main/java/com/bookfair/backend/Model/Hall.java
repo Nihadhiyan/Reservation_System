@@ -35,8 +35,7 @@ import lombok.ToString;
 @Table(name = "halls", indexes = {
         @Index(name = "idx_hall_floor", columnList = "floor_id")
 }, uniqueConstraints = {
-        @UniqueConstraint(name = "uk_hall_floor_name", columnNames = { "floor_id", "name" }),
-        @UniqueConstraint(name = "uk_hall_venue_name", columnNames = { "venue_id", "name" })
+        @UniqueConstraint(name = "uk_hall_floor_name", columnNames = { "floor_id", "name" })
 })
 @Getter
 @Setter
@@ -61,7 +60,7 @@ public class Hall extends BaseEntity {
     private HallType hallType;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "floor_id", nullable = true)
+    @JoinColumn(name = "floor_id", nullable = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Floor floor;
@@ -99,12 +98,6 @@ public class Hall extends BaseEntity {
 
     @Column(name = "air_conditioned")
     private Boolean airConditioned = false;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "venue_id", nullable = true)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private Venue venue;
 
     @OneToMany(mappedBy = "hall", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @ToString.Exclude
