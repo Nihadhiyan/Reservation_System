@@ -8,20 +8,16 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.io.Serializable;
 import java.util.UUID;
 
 @Entity
-@Table(
-    name = "users",
-    indexes = {
+@Table(name = "users", indexes = {
         @Index(name = "idx_user_active", columnList = "active"),
         @Index(name = "idx_user_role", columnList = "role")
-    }
-)
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -69,9 +65,9 @@ public class User extends BaseEntity implements Serializable {
     private DeletionAudit deletionAudit;
 
     public enum Role {
-        SUPER_ADMIN,   // Platform owner
-        ORG_ADMIN,     // Business owner/manager (replaces VENDOR and ORGANIZER)
-        ORG_EMPLOYEE,  // Business staff (replaces EMPLOYEE)
-        CUSTOMER       // Standard public user (no organization needed)
+        SUPER_ADMIN, // Platform owner
+        ORG_ADMIN, // Business owner/manager (replaces VENDOR and ORGANIZER)
+        ORG_EMPLOYEE, // Business staff (replaces EMPLOYEE)
+        CUSTOMER // Standard public user (no organization needed)
     }
 }
