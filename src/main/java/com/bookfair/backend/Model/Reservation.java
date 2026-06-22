@@ -9,22 +9,18 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(
-    name = "reservations",
-    indexes = {
+@Table(name = "reservations", indexes = {
         @Index(name = "idx_reservation_user", columnList = "user_id"),
         @Index(name = "idx_reservation_event", columnList = "event_id"),
         @Index(name = "idx_reservation_expires", columnList = "expires_at"),
         @Index(name = "idx_reservation_status", columnList = "status")
-    }
-)
+})
 @Setter
 @Getter
 @NoArgsConstructor
@@ -40,6 +36,18 @@ public class Reservation extends BaseEntity {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organization_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Organization organization;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reservation_created_by", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private User reservationCreatedBy;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
@@ -76,6 +84,6 @@ public class Reservation extends BaseEntity {
     private String qrCodePayload; // Stores the JWT String for the scanner app
 
     public enum ReservationStatus {
-        PENDING, CONFIRMED, CANCELLED, REJECTED, REFUNDED, REFUND_PENDING
+        PENDING, CONFIRMED, EXPIRED, CANCELLED, REJECTED, REFUNDED, REFUND_PENDING
     }
 }
