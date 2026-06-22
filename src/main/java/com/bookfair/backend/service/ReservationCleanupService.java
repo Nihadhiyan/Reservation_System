@@ -33,7 +33,7 @@ public class ReservationCleanupService {
     @Transactional
     public void releaseExpiredReservations() {
         List<Reservation> expiredReservations = reservationRepository
-            .findByExpiresAtBeforeAndStatus(LocalDateTime.now(), ReservationStatus.PENDING);
+                .findByExpiresAtBeforeAndStatus(LocalDateTime.now(), ReservationStatus.PENDING);
 
         if (expiredReservations.isEmpty()) {
             return;
@@ -45,7 +45,7 @@ public class ReservationCleanupService {
 
         for (Reservation reservation : expiredReservations) {
 
-            reservation.setStatus(ReservationStatus.CANCELLED);
+            reservation.setStatus(ReservationStatus.EXPIRED);
 
             for (ReservationStall rs : reservation.getReservedStalls()) {
                 EventStall eventStall = rs.getEventStall();
@@ -57,21 +57,21 @@ public class ReservationCleanupService {
         eventStallRepository.saveAll(stallsToRelease);
         reservationRepository.saveAll(expiredReservations);
 
-        log.info("Successfully released {} stalls from {} expired reservations.", stallsToRelease.size(), expiredReservations.size());
+        log.info("Successfully released {} stalls from {} expired reservations.", stallsToRelease.size(),
+                expiredReservations.size());
 
         for (Reservation reservation : expiredReservations) {
-            
+
             Map<String, Object> emailData = new HashMap<>();
             emailData.put("userName", reservation.getUser().getUsername());
             emailData.put("eventName", reservation.getEvent().getName());
 
             emailService.sendEmail(
-                reservation.getUser().getEmail(), 
-                "Reservation Expired", 
-                "expired", 
-                emailData, 
-                null
-            );
+                    reservation.getUser().getEmail(),
+                    "Reservation Expired",
+                    "expired",
+                    emailData,
+                    null);
         }
 
     }
