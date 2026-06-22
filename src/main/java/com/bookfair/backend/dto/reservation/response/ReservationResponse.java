@@ -27,4 +27,8 @@ public class ReservationResponse {
     private String status;
     private UUID genreId;
     private String qrCodePayload;
+    private UUID organizationId;
+    private String organizationName;
+    private UUID reservationCreatedByUserId;
+    private String reservationCreatedByUsername;
 }
