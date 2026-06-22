@@ -16,13 +16,23 @@ import com.bookfair.backend.model.ReservationStall;
 import com.bookfair.backend.model.Stall;
 import com.bookfair.backend.model.User;
 
+import org.mapstruct.Mapping;
+
 @Mapper(config = GlobalMapperConfig.class)
 public interface ReservationMapper {
 
+    @Mapping(target = "organizationId", source = "organization.id")
+    @Mapping(target = "organizationName", source = "organization.name")
+    @Mapping(target = "reservationCreatedByUserId", source = "reservationCreatedBy.id")
+    @Mapping(target = "reservationCreatedByUsername", source = "reservationCreatedBy.username")
     ReservationResponse toReservationResponse(Reservation reservation);
 
     ReservationSummaryResponse toReservationSummaryResponse(Reservation reservation);
 
+    @Mapping(target = "organizationId", source = "organization.id")
+    @Mapping(target = "organizationName", source = "organization.name")
+    @Mapping(target = "reservationCreatedByUserId", source = "reservationCreatedBy.id")
+    @Mapping(target = "reservationCreatedByUsername", source = "reservationCreatedBy.username")
     ReservationDetailResponse toReservationDetailResponse(Reservation reservation);
 
     ReservationStallResponse toReservationStallResponse(ReservationStall reservationStall);
