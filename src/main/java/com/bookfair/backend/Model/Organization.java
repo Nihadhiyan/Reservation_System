@@ -30,7 +30,7 @@ import lombok.Setter;
 @Table(
     name = "organizations",
     indexes = {
-        @Index(name = "idx_organization_active", columnList = "active"),
+        @Index(name = "idx_organization_active", columnList = "active")
     }
 )
 @Getter
