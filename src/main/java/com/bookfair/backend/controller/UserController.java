@@ -1,5 +1,6 @@
 package com.bookfair.backend.controller;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.bookfair.backend.dto.common.ApiResponseDto;
 import com.bookfair.backend.dto.reservation.response.ReservationResponse;
 import com.bookfair.backend.dto.user.request.UpdateUserRequest;
 import com.bookfair.backend.dto.user.request.UpdateUserRoleRequest;
@@ -36,67 +38,67 @@ public class UserController {
     
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public ResponseEntity<Page<UserResponse>> getAllUsers(@PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
-        return ResponseEntity.ok(userService.getAllUsers(pageable));
+    public ResponseEntity<ApiResponseDto<Page<UserResponse>>> getAllUsers(@PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
+        Page<UserResponse> data = userService.getAllUsers(pageable);
+        return ResponseEntity.ok(new ApiResponseDto<>(true, "Users retrieved successfully", data, LocalDateTime.now()));
     }
     
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}")
-    public ResponseEntity<UserResponse> getUserById(@PathVariable UUID id) {
-        return ResponseEntity.ok(userService.getUserProfile(id));
+    public ResponseEntity<ApiResponseDto<UserResponse>> getUserById(@PathVariable UUID id) {
+        UserResponse data = userService.getUserProfile(id);
+        return ResponseEntity.ok(new ApiResponseDto<>(true, "User retrieved successfully", data, LocalDateTime.now()));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{id}/role")
-    public ResponseEntity<String> updateRole(@PathVariable UUID id, @Valid @RequestBody UpdateUserRoleRequest updateUserRoleRequest) {
+    public ResponseEntity<ApiResponseDto<Void>> updateRole(@PathVariable UUID id, @Valid @RequestBody UpdateUserRoleRequest updateUserRoleRequest) {
         userService.setRole(id, updateUserRoleRequest);
-        return ResponseEntity.ok("Role Updated Successfully");
+        return ResponseEntity.ok(new ApiResponseDto<>(true, "Role Updated Successfully", null, LocalDateTime.now()));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUserAsAdmin(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponseDto<Void>> deleteUserAsAdmin(@PathVariable UUID id) {
         userService.deleteUserAsAdmin(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new ApiResponseDto<>(true, "User deleted successfully", null, LocalDateTime.now()));
     }
 
     @PreAuthorize("isAuthenticated()")  
     @DeleteMapping("/me")
-    public ResponseEntity<Void> deleteMyAccount(Authentication authentication) {
-
+    public ResponseEntity<ApiResponseDto<Void>> deleteMyAccount(Authentication authentication) {
         String currentUserName = authentication.getName();
-
         userService.deleteMyAccount(currentUserName);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new ApiResponseDto<>(true, "Account deleted successfully", null, LocalDateTime.now()));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}/reservations")
-    public ResponseEntity<List<ReservationResponse>> getAllReservations(@PathVariable UUID id) {
-        return ResponseEntity.ok(userService.getUserReservations(id));
+    public ResponseEntity<ApiResponseDto<List<ReservationResponse>>> getAllReservations(@PathVariable UUID id) {
+        List<ReservationResponse> data = userService.getUserReservations(id);
+        return ResponseEntity.ok(new ApiResponseDto<>(true, "User reservations retrieved successfully", data, LocalDateTime.now()));
     }
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
-    public ResponseEntity<UserResponse> getMyProfile(Authentication authentication) {
+    public ResponseEntity<ApiResponseDto<UserResponse>> getMyProfile(Authentication authentication) {
         String currentUsername = authentication.getName(); 
-        
-        return ResponseEntity.ok(userService.getMyProfile(currentUsername));
+        UserResponse data = userService.getMyProfile(currentUsername);
+        return ResponseEntity.ok(new ApiResponseDto<>(true, "Profile retrieved successfully", data, LocalDateTime.now()));
     }
 
     @PreAuthorize("isAuthenticated()")
     @PutMapping("/me")
-    public ResponseEntity<UserResponse> updateUser(Authentication authentication, @Valid @RequestBody UpdateUserRequest userUpdateRequest) {
+    public ResponseEntity<ApiResponseDto<UserResponse>> updateUser(Authentication authentication, @Valid @RequestBody UpdateUserRequest userUpdateRequest) {
         String currentUsername = authentication.getName();
-
-        return ResponseEntity.ok(userService.updateUser(currentUsername, userUpdateRequest));
+        UserResponse data = userService.updateUser(currentUsername, userUpdateRequest);
+        return ResponseEntity.ok(new ApiResponseDto<>(true, "Profile updated successfully", data, LocalDateTime.now()));
     }
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/me/reservations")
-    public ResponseEntity<List<ReservationResponse>> getMyReservations(Authentication authentication) {
-        return ResponseEntity.ok(userService.getMyReservations(authentication.getName()));
+    public ResponseEntity<ApiResponseDto<List<ReservationResponse>>> getMyReservations(Authentication authentication) {
+        List<ReservationResponse> data = userService.getMyReservations(authentication.getName());
+        return ResponseEntity.ok(new ApiResponseDto<>(true, "My reservations retrieved successfully", data, LocalDateTime.now()));
     }
-    
-    
 }

@@ -1,5 +1,7 @@
 package com.bookfair.backend.controller;
 
+import java.time.LocalDateTime;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,6 +16,7 @@ import com.bookfair.backend.dto.auth.request.RegisterRequest;
 import com.bookfair.backend.dto.auth.request.ResetPasswordRequest;
 import com.bookfair.backend.dto.auth.request.VerifyEmailRequest;
 import com.bookfair.backend.dto.auth.response.AuthResponse;
+import com.bookfair.backend.dto.common.ApiResponseDto;
 import com.bookfair.backend.dto.user.request.ChangePasswordRequest;
 import com.bookfair.backend.service.AuthService;
 
@@ -29,59 +32,62 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest registerRequest) {
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(registerRequest));
-
+    public ResponseEntity<ApiResponseDto<AuthResponse>> register(@Valid @RequestBody RegisterRequest registerRequest) {
+        AuthResponse data = authService.register(registerRequest);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponseDto<>(true, "Registration successful", data, LocalDateTime.now()));
     }
 
-    @PostMapping("/login") 
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
-
-        return ResponseEntity.ok(authService.login(loginRequest));
-
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponseDto<AuthResponse>> login(@Valid @RequestBody LoginRequest loginRequest) {
+        AuthResponse data = authService.login(loginRequest);
+        return ResponseEntity.ok(new ApiResponseDto<>(true, "Login successful", data, LocalDateTime.now()));
     }
 
-    @PostMapping("/logout") 
-    public ResponseEntity<String> logout(HttpServletRequest request) {
-        
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponseDto<Void>> logout(HttpServletRequest request) {
         authService.logout(request.getHeader("Authorization"));
-        return ResponseEntity.ok("Successfully logged out");
-
+        return ResponseEntity.ok(new ApiResponseDto<>(true, "Successfully logged out", null, LocalDateTime.now()));
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<AuthResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest refreshTokenRequest) {
-        return ResponseEntity.ok(authService.refreshToken(refreshTokenRequest));
+    public ResponseEntity<ApiResponseDto<AuthResponse>> refreshToken(
+            @Valid @RequestBody RefreshTokenRequest refreshTokenRequest) {
+        AuthResponse data = authService.refreshToken(refreshTokenRequest);
+        return ResponseEntity.ok(new ApiResponseDto<>(true, "Token refreshed successfully", data, LocalDateTime.now()));
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<String> forgotPassword (@RequestParam("email") String email) {
+    public ResponseEntity<ApiResponseDto<Void>> forgotPassword(@RequestParam("email") String email) {
         authService.forgotPassword(email);
-        return ResponseEntity.ok("If an account with that email exists, a reset link has been sent.");
+        return ResponseEntity.ok(new ApiResponseDto<>(true,
+                "If an account with that email exists, a reset link has been sent.", null, LocalDateTime.now()));
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<ApiResponseDto<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
-        return ResponseEntity.ok("Password has been successfully reset.");
+        return ResponseEntity
+                .ok(new ApiResponseDto<>(true, "Password has been successfully reset.", null, LocalDateTime.now()));
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<String> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<ApiResponseDto<Void>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         authService.changePassword(request);
-        return ResponseEntity.ok("Password successfully updated.");
+        return ResponseEntity
+                .ok(new ApiResponseDto<>(true, "Password successfully updated.", null, LocalDateTime.now()));
     }
 
     @PostMapping("/verify-email")
-    public ResponseEntity<String> verifyEmail(@Valid @RequestBody VerifyEmailRequest verifyEmailRequest) {
+    public ResponseEntity<ApiResponseDto<Void>> verifyEmail(@Valid @RequestBody VerifyEmailRequest verifyEmailRequest) {
         authService.verifyEmail(verifyEmailRequest);
-        return ResponseEntity.ok("Email successfully verified. You may now log in.");
+        return ResponseEntity.ok(new ApiResponseDto<>(true, "Email successfully verified. You may now log in.", null,
+                LocalDateTime.now()));
     }
 
     @PostMapping("/send-verification")
-    public ResponseEntity<String> sendVerification(@RequestParam("email") String email) {
+    public ResponseEntity<ApiResponseDto<Void>> sendVerification(@RequestParam("email") String email) {
         authService.sendVerificationEmail(email);
-        return ResponseEntity.ok("Verification email sent.");
+        return ResponseEntity.ok(new ApiResponseDto<>(true, "Verification email sent.", null, LocalDateTime.now()));
     }
 }
