@@ -33,12 +33,12 @@ public class CreateEventRequest {
     @NotNull(message = "Event type is required")
     private Event.EventType eventType;
 
-    @NotBlank(message = "Event start date is required")
+    @NotNull(message = "Event start date is required")
     private LocalDateTime startDateTime;
 
-    @NotBlank(message = "Event end date is required")
+    @NotNull(message = "Event end date is required")
     private LocalDateTime endDateTime;
 
-    @NotBlank(message = "Event status is required")
+    @NotNull(message = "Event status is required")
     private Event.EventStatus status;
 }

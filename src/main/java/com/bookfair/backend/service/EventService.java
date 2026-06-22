@@ -34,7 +34,7 @@ public class EventService {
 
     public List<EventStallResponse> getStallsForEvent(UUID eventId) {
         Event event = eventRepository.findByIdAndActiveTrue(eventId)
-            .orElseThrow(() -> new ResourceNotFoundException("Event event not found", ErrorCode.EVENT_NOT_FOUND));
+            .orElseThrow(() -> new ResourceNotFoundException("Event not found", ErrorCode.EVENT_NOT_FOUND));
 
         return eventStallRepository.findByEvent(event).stream().map(eventStall -> {
             return eventMapper.toEventStallResponse(eventStall);

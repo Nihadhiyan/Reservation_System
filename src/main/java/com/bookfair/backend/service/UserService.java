@@ -227,7 +227,7 @@ public class UserService {
             }
         }
 
-        if (targetUser.getRole() == Role.ORG_ADMIN && updateUserRoleRequest.getRole() != Role.ORG_ADMIN) {
+        if (targetUser.getRole() == Role.ORG_ADMIN && updateUserRoleRequest.getRole() != Role.ORG_ADMIN && targetUser.getOrganization() != null) {
             long adminCount = userRepository.countByOrganizationIdAndRoleAndActiveTrue(
                 targetUser.getOrganization().getId(), Role.ORG_ADMIN
             );
