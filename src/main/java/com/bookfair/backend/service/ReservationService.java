@@ -18,6 +18,10 @@ import com.bookfair.backend.model.EventStall.AvailabilityStatus;
 import com.bookfair.backend.model.Event;
 import com.bookfair.backend.model.EventStall;
 import com.bookfair.backend.model.Genre;
+import com.bookfair.backend.event.reservation.ReservationConfirmedEvent;
+import com.bookfair.backend.event.reservation.ReservationRefundPendingEvent;
+import com.bookfair.backend.event.reservation.ReservationRefundedEvent;
+import com.bookfair.backend.event.reservation.ReservationRequestReceivedEvent;
 import com.bookfair.backend.repository.EventRepository;
 import com.bookfair.backend.repository.EventStallRepository;
 import com.bookfair.backend.repository.GenreRepository;
@@ -27,6 +31,7 @@ import com.bookfair.backend.security.CustomUserPrincipal;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -50,11 +55,11 @@ public class ReservationService {
     private final EventStallRepository eventStallRepository;
     private final EventRepository eventRepository;
     private final QRService qrCodeService;
-    private final EmailService emailService;
     private final GenreRepository genreRepository;
     private final PricingEngineService pricingEngineService;
     private final ReservationMapper reservationMapper;
     private final ReservationAuthorizationService authorizationService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public List<ReservationResponse> getMyReservations(String username) {
@@ -140,16 +145,7 @@ public class ReservationService {
         eventStallRepository.saveAll(stalls);
         Reservation savedReservation = reservationRepository.save(reservation);
 
-        Map<String, Object> emailData = new HashMap<>();
-        emailData.put("userName", user.getUsername());
-        emailData.put("eventName", event.getName());
-
-        emailService.sendEmail(
-                user.getEmail(),
-                "Reservation Request Received",
-                "pending",
-                emailData,
-                null);
+        eventPublisher.publishEvent(new ReservationRequestReceivedEvent(user.getId(), event.getName()));
 
         return reservationMapper.toReservationResponse(savedReservation);
     }
@@ -186,16 +182,7 @@ public class ReservationService {
 
         reservationRepository.save(reservation);
 
-        Map<String, Object> emailData = new HashMap<>();
-        emailData.put("userName", reservation.getUser().getUsername());
-        emailData.put("eventName", reservation.getEvent().getName());
-
-        emailService.sendEmail(
-                reservation.getUser().getEmail(),
-                "Reservation Confirmed - Your Ticket",
-                "confirmed",
-                emailData,
-                qrCodeImage);
+        eventPublisher.publishEvent(new ReservationConfirmedEvent(reservation.getUser().getId(), reservation.getEvent().getName(), qrCodeImage));
     }
 
     @Transactional
@@ -220,16 +207,7 @@ public class ReservationService {
         reservation.setStatus(ReservationStatus.REFUND_PENDING);
         reservationRepository.save(reservation);
 
-        Map<String, Object> emailData = new HashMap<>();
-        emailData.put("userName", reservation.getUser().getUsername());
-        emailData.put("eventName", reservation.getEvent().getName());
-
-        emailService.sendEmail(
-                reservation.getUser().getEmail(),
-                "Refund Request Received",
-                "refund_pending",
-                emailData,
-                null);
+        eventPublisher.publishEvent(new ReservationRefundPendingEvent(reservation.getUser().getId(), reservation.getEvent().getName()));
     }
 
     @Transactional
@@ -256,16 +234,7 @@ public class ReservationService {
 
         reservationRepository.save(reservation);
 
-        Map<String, Object> emailData = new HashMap<>();
-        emailData.put("userName", reservation.getUser().getUsername());
-        emailData.put("eventName", reservation.getEvent().getName());
-
-        emailService.sendEmail(
-                reservation.getUser().getEmail(),
-                "Refund Processed Successfully",
-                "refunded",
-                emailData,
-                null);
+        eventPublisher.publishEvent(new ReservationRefundedEvent(reservation.getUser().getId(), reservation.getEvent().getName()));
     }
 
     @Transactional(readOnly = true)

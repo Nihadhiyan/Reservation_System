@@ -15,8 +15,10 @@ import com.bookfair.backend.model.Reservation;
 import com.bookfair.backend.model.ReservationStall;
 import com.bookfair.backend.model.EventStall.AvailabilityStatus;
 import com.bookfair.backend.model.Reservation.ReservationStatus;
+import com.bookfair.backend.event.reservation.ReservationExpiredEvent;
 import com.bookfair.backend.repository.EventStallRepository;
 import com.bookfair.backend.repository.ReservationRepository;
+import org.springframework.context.ApplicationEventPublisher;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ReservationCleanupService {
     private final ReservationRepository reservationRepository;
     private final EventStallRepository eventStallRepository;
-    private final EmailService emailService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Scheduled(fixedRate = 60000)
     @Transactional
@@ -62,16 +64,7 @@ public class ReservationCleanupService {
 
         for (Reservation reservation : expiredReservations) {
 
-            Map<String, Object> emailData = new HashMap<>();
-            emailData.put("userName", reservation.getUser().getUsername());
-            emailData.put("eventName", reservation.getEvent().getName());
-
-            emailService.sendEmail(
-                    reservation.getUser().getEmail(),
-                    "Reservation Expired",
-                    "expired",
-                    emailData,
-                    null);
+            eventPublisher.publishEvent(new ReservationExpiredEvent(reservation.getUser().getId(), reservation.getEvent().getName()));
         }
 
     }

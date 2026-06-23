@@ -16,8 +16,6 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateReservationRequest {
-    @NotNull(message = "User id is required")
-    private UUID userId;
 
     @NotNull(message = "Event id is required")
     private UUID eventId;
