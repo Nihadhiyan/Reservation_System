@@ -2,8 +2,6 @@ package com.bookfair.backend.config.filter;
 
 import java.io.IOException;
 import java.util.UUID;
-
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,6 +13,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.bookfair.backend.security.CustomUserDetailsService;
 import com.bookfair.backend.security.JwtService;
+import com.bookfair.backend.service.SecurityManagementService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -31,7 +30,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final CustomUserDetailsService customUserDetailsService;
-    private final StringRedisTemplate redisTemplate;
+    private final SecurityManagementService securityManagementService;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
@@ -49,8 +48,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         token = authHeader.substring(7);
         try {
-            Boolean isBlacklisted = redisTemplate.hasKey("blacklist:" + token);
-            if (Boolean.TRUE.equals(isBlacklisted)) {
+            if (securityManagementService.isTokenBlacklisted(token)) {
                 log.warn("Rejected request: Attempted access using a blacklisted token.");
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType("application/json");
@@ -58,7 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
         } catch (Exception e) {
-            log.error("Redis blacklist lookup failed: {}", e.getMessage());
+            log.error("SecurityManagementService blacklist lookup failed: {}", e.getMessage());
         }
 
 
