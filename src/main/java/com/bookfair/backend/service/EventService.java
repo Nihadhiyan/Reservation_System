@@ -43,6 +43,7 @@ public class EventService {
     private final VenueRepository venueRepository;
     private final UserRepository userRepository;
     private final EventMapper eventMapper;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public List<EventResponse> getUpcomingEvents() {
@@ -163,6 +164,27 @@ public class EventService {
 
         event.setActive(false);
         eventRepository.save(event);
+    }
+
+    @Transactional
+    public void changeStatus(UUID eventId, String newStatusString) {
+        Event eventInstance = eventRepository.findByIdAndActiveTrue(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found", ErrorCode.EVENT_NOT_FOUND));
+
+        String oldStatus = eventInstance.getStatus().name();
+        Event.EventStatus newStatus = Event.EventStatus.valueOf(newStatusString.toUpperCase());
+
+        if (!oldStatus.equals(newStatus.name())) {
+            eventInstance.setStatus(newStatus);
+            eventRepository.save(eventInstance);
+
+            eventPublisher.publishEvent(new com.bookfair.backend.event.event.EventStatusChangedEvent(
+                    eventInstance.getId(),
+                    oldStatus,
+                    newStatus.name()
+            ));
+
+        }
     }
 
     private UUID getCurrentUserId() {

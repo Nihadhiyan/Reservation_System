@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PatchMapping;
 
 import com.bookfair.backend.dto.common.ApiResponseDto;
 import com.bookfair.backend.dto.event.request.CreateEventRequest;
@@ -77,5 +79,12 @@ public class EventController {
     public ResponseEntity<ApiResponseDto<Void>> deleteEvent(@PathVariable UUID id) {
         eventService.deleteEvent(id);
         return ResponseEntity.ok(new ApiResponseDto<>(true, "Event deleted successfully", null, LocalDateTime.now()));
+    }
+
+    @PatchMapping("/{eventId}/status")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Void> changeStatus(@PathVariable UUID eventId, @RequestParam String status) {
+        eventService.changeStatus(eventId, status);
+        return ResponseEntity.noContent().build();
     }
 }
