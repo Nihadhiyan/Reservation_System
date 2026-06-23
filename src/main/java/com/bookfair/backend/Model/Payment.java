@@ -48,8 +48,8 @@ public class Payment extends BaseEntity {
     @EqualsAndHashCode.Exclude
     private Reservation reservation;
 
-    @Column(name = "stripe_charge_id", unique = true)
-    private String stripeChargeId; // The receipt ID from your payment gateway
+    @Column(name = "transaction_id", unique = true)
+    private String transactionId; // The receipt ID from your payment gateway
 
     @Column(nullable = false, precision = 10, scale = 2)
     @Positive(message = "Payment amount must be positive")
