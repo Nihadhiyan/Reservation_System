@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
-    
+
     Optional<User> findByEmailAndActiveTrue(String email);
 
     Optional<User> findByUsernameAndActiveTrue(String username);
@@ -33,4 +33,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     long countByRoleAndActiveTrue(Role role);
 
     long countByOrganizationIdAndRoleAndActiveTrue(UUID id, Role orgAdmin);
+
+    List<User> findAllByOrganizationId(UUID orgId);
+    
+    List<User> findByRole(Role role);
+
+    void updateAllByOrganizationId(UUID orgId, Set<OrganizationCapability> newCapability);
+
 }

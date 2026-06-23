@@ -6,7 +6,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -23,7 +22,12 @@ import com.bookfair.backend.dto.auth.request.ResetPasswordRequest;
 import com.bookfair.backend.dto.auth.request.VerifyEmailRequest;
 import com.bookfair.backend.dto.auth.response.AuthResponse;
 import com.bookfair.backend.dto.user.request.ChangePasswordRequest;
-import com.bookfair.backend.event.UserUpdatedEvent;
+import com.bookfair.backend.event.user.UserAccountLockedEvent;
+import com.bookfair.backend.event.user.UserPasswordChangedEvent;
+import com.bookfair.backend.event.user.UserRegisteredEvent;
+import com.bookfair.backend.event.user.UserUpdatedEvent;
+import com.bookfair.backend.event.user.PasswordResetRequestedEvent;
+import com.bookfair.backend.event.user.UserEmailVerificationRequestedEvent;
 import com.bookfair.backend.exception.BusinessException;
 import com.bookfair.backend.exception.DuplicateResourceException;
 import com.bookfair.backend.exception.ErrorCode;
@@ -52,9 +56,10 @@ public class AuthService {
     private final AuthMapper authMapper;
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
-    private final EmailService emailService;
-    private final StringRedisTemplate redisTemplate;
+    private final TokenManagementService tokenManagementService;
+    private final SecurityManagementService securityManagementService;
     private final ApplicationEventPublisher eventPublisher;
+    private final LoginAttemptService loginAttemptService;
 
     @Transactional
     public AuthResponse register(RegisterRequest registerRequest) {
@@ -108,6 +113,8 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
+        eventPublisher.publishEvent(new UserRegisteredEvent(savedUser.getId(), savedUser.getUsername(), savedUser.getEmail()));
+
         String accessToken = jwtService.generateAccessToken(savedUser);
         String refreshToken = jwtService.generateRefreshToken(savedUser);
 
@@ -119,10 +126,25 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest loginRequest) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginRequest.getUsername(),
-                        loginRequest.getPassword()));
+        if (loginAttemptService.isLocked(loginRequest.getUsername())) {
+            throw new BusinessException("Account is locked due to too many failed login attempts.", ErrorCode.FORBIDDEN);
+        }
+
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getUsername(),
+                            loginRequest.getPassword()));
+        } catch (org.springframework.security.core.AuthenticationException e) {
+            loginAttemptService.recordFailedAttempt(loginRequest.getUsername());
+            if (loginAttemptService.isLocked(loginRequest.getUsername())) {
+                userRepository.findByUsernameAndActiveTrue(loginRequest.getUsername())
+                    .ifPresent(u -> eventPublisher.publishEvent(new UserAccountLockedEvent(u.getId(), u.getUsername(), u.getEmail())));
+            }
+            throw new BusinessException("Invalid username or password", ErrorCode.UNAUTHORIZED);
+        }
+
+        loginAttemptService.resetAttempts(loginRequest.getUsername());
 
         User user = userRepository.findByUsernameAndActiveTrue(loginRequest.getUsername())
                 .orElseThrow(() -> new ResourceNotFoundException("Invalid username or password", ErrorCode.USER_NOT_FOUND));
@@ -171,17 +193,17 @@ public class AuthService {
 
         if (remainingTime > 0) {
             try {
-                redisTemplate.opsForValue().set(
-                    "blacklist:" + token, 
-                    "revoked", 
-                    remainingTime, 
-                    TimeUnit.MILLISECONDS
-                );
+                securityManagementService.blacklistToken(token, remainingTime);
+                
+                String username = jwtService.extractUsername(token);
+                userRepository.findByUsernameAndActiveTrue(username).ifPresent(user -> {
+                    securityManagementService.removeSession(user.getId(), token);
+                });
 
-                log.info("Token successfully blacklisted in Redis.");
+                log.info("Token successfully blacklisted and session removed.");
             }
             catch (Exception e) {
-                log.warn("Failed to blacklist token in Redis: {}. Token will expire naturally.", e.getMessage());
+                log.warn("Failed to blacklist token or remove session: {}. Token will expire naturally.", e.getMessage());
             }
         }
     }
@@ -189,21 +211,15 @@ public class AuthService {
     public void forgotPassword(String email) {
         userRepository.findByEmailAndActiveTrue(email).ifPresent(user -> {
             String resetToken = jwtService.generatePasswordResetToken(user);
+            tokenManagementService.storePasswordResetToken(
+                user.getId().toString(),
+                resetToken,
+                15,
+                TimeUnit.MINUTES);
 
             String resetLink = "https://clausis.com/reset-password?token=" + resetToken;
 
-            Map<String, Object> emailVariables = new HashMap<>();
-            emailVariables.put("userName", user.getUsername());
-            emailVariables.put("resetLink", resetLink);
-
-            emailService.sendEmail(
-                user.getEmail(), 
-                "Password Reset Request", 
-                "password_reset_template", 
-                emailVariables, 
-                null
-            );
-
+            eventPublisher.publishEvent(new PasswordResetRequestedEvent(user.getId(), resetLink));
         });
     }
 
@@ -230,18 +246,7 @@ public class AuthService {
         userRepository.save(user);
 
         eventPublisher.publishEvent(new UserUpdatedEvent(user.getId(), user.getUsername()));
-        
-
-        Map<String, Object> emailVariables = new HashMap<>();
-        emailVariables.put("userName", user.getUsername());
-        
-        emailService.sendEmail(
-            user.getEmail(), 
-            "Your Password Has Been Changed", 
-            "password_reset_success_template", 
-            emailVariables, 
-            null
-        );
+        eventPublisher.publishEvent(new UserPasswordChangedEvent(user.getId(), user.getUsername(), user.getEmail()));
     }
 
     @Transactional
@@ -263,6 +268,7 @@ public class AuthService {
         userRepository.save(user);
 
         eventPublisher.publishEvent(new UserUpdatedEvent(user.getId(), user.getUsername()));
+        eventPublisher.publishEvent(new UserPasswordChangedEvent(user.getId()));
 
     }
 
@@ -301,21 +307,15 @@ public class AuthService {
     public void sendVerificationEmail (String email) {
         userRepository.findByEmailAndActiveTrue(email).ifPresent(user -> {
             String verificationToken = jwtService.generateVerificationToken(user);
+            tokenManagementService.storeEmailVerificationToken(
+                user.getId().toString(),
+                verificationToken,
+                24,
+                TimeUnit.HOURS);
 
             String verificationLink = "https://clausis.com/verify-email?token=" + verificationToken;
 
-            Map<String, Object> emailVariables = new HashMap<>();
-            emailVariables.put("userName", user.getUsername());
-            emailVariables.put("verificationLink", verificationLink);
-
-            emailService.sendEmail(
-                user.getEmail(), 
-                "Verify Your Email", 
-                "email_verification_template", 
-                emailVariables, 
-                null
-            );
-
+            eventPublisher.publishEvent(new UserEmailVerificationRequestedEvent(user.getId(), verificationLink));
         });
     }
 

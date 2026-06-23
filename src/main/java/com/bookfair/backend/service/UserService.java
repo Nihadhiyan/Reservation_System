@@ -274,7 +274,7 @@ public class UserService {
                         LocalDateTime.now(),
                         getCurrentUserId()));
         userRepository.save(user);
-        publishUserUpdatedEvent(user);
+        eventPublisher.publishEvent(new com.bookfair.backend.event.user.UserDeletedEvent(user.getId(), user.getUsername(), user.getEmail()));
     }
 
     private void publishUserUpdatedEvent(User user) {
