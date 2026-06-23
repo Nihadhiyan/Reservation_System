@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Organization Deactivated</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 600px;
+            margin: auto;
+        }
+
+        .header {
+            color: #f0ad4e;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .content {
+            font-size: 16px;
+            color: #333333;
+            line-height: 1.5;
+        }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #777777;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">Important Account Notice</div>
+        <div class="content">
+            <p>Hello <span th:text="${userName}">User</span>,</p>
+            <p>We are writing to inform you that your associated organization has been deactivated. As a result, your
+                account capabilities may be limited or suspended.</p>
+            <p>Please contact your organization administrator for further details.</p>
+        </div>
+        <div class="footer">
+            &copy; Clausis Technologies. All rights reserved.
+        </div>
+    </div>
+</body>
+
+</html>
