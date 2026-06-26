@@ -5,6 +5,8 @@ import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -33,7 +35,8 @@ public class PricingRule extends BaseEntity {
     private String description;
 
     @Column(nullable = false)
-    private String conditionType; // e.g., ORG_TYPE, DURATION, SEASONAL
+    @Enumerated(EnumType.STRING)
+    private ConditionType conditionType; // e.g., ORG_TYPE, DURATION, SEASONAL
 
     @Column(nullable = false)
     private String conditionValue; // e.g., NON_PROFIT, >7_DAYS, SUMMER
@@ -43,4 +46,12 @@ public class PricingRule extends BaseEntity {
 
     @Column(nullable = false)
     private Boolean active = true;
+
+    @Column(name = "priority")
+    private Integer priority;
+
+    public enum ConditionType {
+        ORG_TYPE, DURATION, SEASONAL
+    }
+
 }

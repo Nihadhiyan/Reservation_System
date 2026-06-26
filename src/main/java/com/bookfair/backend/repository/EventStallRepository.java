@@ -11,6 +11,8 @@ import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.data.jpa.repository.EntityGraph;
+
 import com.bookfair.backend.model.Event;
 import com.bookfair.backend.model.EventStall;
 import com.bookfair.backend.model.EventStall.AvailabilityStatus;
@@ -25,7 +27,8 @@ public interface EventStallRepository extends JpaRepository<EventStall, UUID> {
 
     List<EventStall> findByEvent(Event event);
 
-    @Query("SELECT es FROM EventStall es JOIN FETCH es.stall WHERE es.event.id = :eventId")
+    @EntityGraph(attributePaths = {"stall"})
+    @Query("SELECT es FROM EventStall es WHERE es.event.id = :eventId")
     List<EventStall> findAllByEventIdWithStallData(@Param("eventId") UUID eventId);
 
     List<EventStall> findByStatus(AvailabilityStatus status);

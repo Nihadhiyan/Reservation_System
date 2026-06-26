@@ -65,7 +65,7 @@ public class Organization extends BaseEntity {
     private Set<OrganizationCapability> capabilities;
 
     @OneToMany(mappedBy = "organization")
-    private List<User> employees;
+    private List<OrganizationMember> employees;
 
     @OneToMany(mappedBy = "owner")
     private List<Venue> ownedVenues;

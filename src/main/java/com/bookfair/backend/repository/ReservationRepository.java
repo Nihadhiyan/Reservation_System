@@ -30,8 +30,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
 
     Optional<Reservation> findByIdAndStatus(UUID reservationId, Reservation.ReservationStatus status);
 
-    Optional<Reservation> findById(UUID id);
-
     List<Reservation> findByEventId(UUID eventId);
 
     List<Reservation> findByExpiresAtBeforeAndStatus(LocalDateTime expiresAt, Reservation.ReservationStatus status);
