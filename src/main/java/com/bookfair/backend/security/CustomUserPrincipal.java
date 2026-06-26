@@ -1,7 +1,9 @@
 package com.bookfair.backend.security;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.jspecify.annotations.Nullable;
@@ -9,6 +11,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import com.bookfair.backend.model.OrganizationMember;
 import com.bookfair.backend.model.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -28,22 +31,28 @@ public class CustomUserPrincipal implements UserDetails {
     private UUID id;
     private String username;
     private String password;
-    private String role;
+    private String systemRole;
+    private Map<String, String> orgRoles = new HashMap<>();
     private Boolean active;
 
-    public CustomUserPrincipal(User user) {
+    public CustomUserPrincipal(User user, List<OrganizationMember> members) {
         this.id = user.getId();
         this.username = user.getUsername();
         this.password = user.getPassword();
-        this.role = user.getRole().name();
+        this.systemRole = user.getSystemRole() != null ? user.getSystemRole().name() : "CUSTOMER";
         this.active = user.getActive();
-    }   
+        if (members != null) {
+            for (OrganizationMember member : members) {
+                this.orgRoles.put(member.getOrganization().getId().toString(), member.getRole().name());
+            }
+        }
+    }
 
     @Override
     @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(
-                new SimpleGrantedAuthority("ROLE_" + role)
+                new SimpleGrantedAuthority("ROLE_" + systemRole)
         );
     }
 
@@ -76,5 +85,4 @@ public class CustomUserPrincipal implements UserDetails {
     public boolean isCredentialsNonExpired() {
         return true;
     }
-    
 }

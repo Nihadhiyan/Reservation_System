@@ -20,7 +20,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
-import lombok.NonNull;
+import org.springframework.lang.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Component
@@ -62,7 +62,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             userId = jwtService.extractUserId(token);
-            roles = jwtService.extractRoles(token);
+            roles = jwtService.extractSystemRole(token);
         } catch (Exception e) {
             log.error("JWT Token extraction failed: {}", e.getMessage());
         }

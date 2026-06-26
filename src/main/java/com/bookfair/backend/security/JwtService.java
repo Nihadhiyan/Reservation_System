@@ -4,6 +4,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import javax.crypto.SecretKey;
@@ -14,13 +15,19 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import com.bookfair.backend.model.User;
+import com.bookfair.backend.model.OrganizationMember;
+import com.bookfair.backend.repository.OrganizationMemberRepository;
+import java.util.List;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class JwtService {
 
     @Value("${app.jwtSecret:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
@@ -33,12 +40,20 @@ public class JwtService {
     private static final long PASSWORD_RESET_AND_VERIFICATION_TOKEN_EXPIRATION_TIME = 1000 * 60 * 15;
 
     private final StringRedisTemplate redisTemplate;
+    private final OrganizationMemberRepository memberRepository;
 
     public String generateAccessToken(User user) {
 
         Map<String, Object> claims = new HashMap<>();
 
-        claims.put("roles", "ROLE_" + user.getRole().name());
+        claims.put("roles", "ROLE_" + (user.getSystemRole() != null ? user.getSystemRole().name() : "CUSTOMER"));
+        
+        List<OrganizationMember> members = memberRepository.findByUserId(user.getId());
+        Map<String, String> orgRoles = new HashMap<>();
+        for (OrganizationMember member : members) {
+            orgRoles.put(member.getOrganization().getId().toString(), member.getRole().name());
+        }
+        claims.put("org_roles", orgRoles);
 
         String token = Jwts.builder()
                 .claims()
@@ -50,7 +65,7 @@ public class JwtService {
                 .signWith(getKey())
                 .compact();
 
-        String sessionKey = "user_sessiions:" + user.getId().toString();
+        String sessionKey = "user_sessions:" + user.getId().toString();
 
         redisTemplate.opsForSet().add(sessionKey, token);
         redisTemplate.expire(sessionKey, ACCESS_TOKEN_EXPIRATION_TIME, TimeUnit.MILLISECONDS);
@@ -98,8 +113,13 @@ public class JwtService {
         return UUID.fromString(extractClaim(token, Claims::getSubject));
     }
 
-    public String extractRoles(String token) {
+    public String extractSystemRole(String token) {
         return extractClaim(token, claims -> claims.get("roles", String.class));
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, String> extractOrgRoles(String token) {
+        return extractClaim(token, claims -> claims.get("org_roles", Map.class));
     }
 
     public String extractPurpose(String token) {

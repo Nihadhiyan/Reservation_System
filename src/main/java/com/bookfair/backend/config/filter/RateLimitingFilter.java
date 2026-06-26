@@ -7,7 +7,12 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.lang.NonNull;
 
 import com.bookfair.backend.service.RateLimitingService;
 
@@ -23,9 +28,9 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
     // Define your global limits here
     private static final int MAX_REQUESTS_PER_MINUTE = 100;
-    private static final long TIME_WINDOW_SECONDS = 60;
+    private static final int TIME_WINDOW_SECONDS = 60;
 
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
         // Extract client IP
@@ -35,9 +40,9 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
         if (!allowed) {
 
-            response.setStatus(HttpStatus.SC_TOO_MANY_REQUESTS.value());
+            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType("application/json");
-            response.getWriter("{\"error\": \"Too many requests. Please try again later\"}");
+            response.getWriter().write("{\"error\": \"Too many requests. Please try again later\"}");
             return;
 
         }
