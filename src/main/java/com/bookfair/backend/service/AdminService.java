@@ -1,19 +1,21 @@
 package com.bookfair.backend.service;
 
-import java.math.BigDecimal;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
+import com.bookfair.backend.dto.admin.mapper.AdminMapper;
 import com.bookfair.backend.dto.admin.response.AdminDashboardResponse;
+import com.bookfair.backend.model.Reservation.ReservationStatus;
 import com.bookfair.backend.repository.ReservationRepository;
 import com.bookfair.backend.repository.StallRepository;
 import com.bookfair.backend.repository.UserRepository;
-import com.bookfair.backend.repository.PaymentRepository;
-import com.bookfair.backend.model.Payment;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 @RequiredArgsConstructor
@@ -23,37 +25,38 @@ public class AdminService {
     private final UserRepository userRepository;
     private final StallRepository stallRepository;
     private final ReservationRepository reservationRepository;
-    private final PaymentRepository paymentRepository;
+    private final AdminMapper adminMapper;
 
-    // In-memory toggle for system maintenance mode
-    private boolean maintenanceMode = false;
+    // Upgraded to AtomicBoolean for thread safety without needing a database table
+    // yet
+    private final AtomicBoolean maintenanceMode = new AtomicBoolean(false);
 
     @Transactional(readOnly = true)
-    public AdminDashboardResponse getDashboardMetrics() {
-        long totalUsers = userRepository.count();
-        long totalStalls = stallRepository.count();
-        long activeReservations = reservationRepository.count();
-        
-        BigDecimal totalRevenue = paymentRepository.findAll().stream()
-                .filter(p -> p.getStatus() == Payment.PaymentStatus.COMPLETED)
-                .map(Payment::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    public AdminDashboardResponse getDashboardStats() {
+        long totalUsers = userRepository.countByActiveTrue();
+        long totalStalls = stallRepository.countByActiveTrue();
+        long activeReservations = reservationRepository
+                .countByExpiresAtAfterAndStatus(LocalDateTime.now(), ReservationStatus.CONFIRMED);
 
-        AdminDashboardResponse response = new AdminDashboardResponse();
-        response.setTotalUsers(totalUsers);
-        response.setTotalStalls(totalStalls);
-        response.setActiveReservations(activeReservations);
-        response.setTotalRevenue(totalRevenue);
+        // Null protection for JPQL SUM() aggregation
+        BigDecimal totalRevenue = Optional.ofNullable(
+                reservationRepository.sumTotalPriceByStatus(ReservationStatus.CONFIRMED)).orElse(BigDecimal.ZERO);
 
-        return response;
+        return adminMapper.toAdminDashboardResponse(
+                totalUsers, totalStalls, activeReservations, totalRevenue);
     }
 
+    // Service-level security enforcement
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public void toggleMaintenanceMode() {
-        this.maintenanceMode = !this.maintenanceMode;
-        log.info("System maintenance mode toggled to: {}", this.maintenanceMode);
+        // Thread-safe state toggle
+        boolean currentMode = this.maintenanceMode.get();
+        this.maintenanceMode.set(!currentMode);
+
+        log.info("System maintenance mode toggled to: {}", this.maintenanceMode.get());
     }
-    
+
     public boolean isMaintenanceMode() {
-        return this.maintenanceMode;
+        return this.maintenanceMode.get();
     }
 }

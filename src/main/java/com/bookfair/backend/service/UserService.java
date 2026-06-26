@@ -18,7 +18,8 @@ import com.bookfair.backend.dto.user.mapper.UserMapper;
 import com.bookfair.backend.dto.user.request.UpdateUserRequest;
 import com.bookfair.backend.dto.user.request.UpdateUserRoleRequest;
 import com.bookfair.backend.dto.user.response.UserResponse;
-import com.bookfair.backend.event.UserUpdatedEvent;
+import com.bookfair.backend.event.user.UserUpdatedEvent;
+import com.bookfair.backend.event.user.UserRoleUpdatedEvent;
 import com.bookfair.backend.exception.BusinessException;
 import com.bookfair.backend.exception.DuplicateResourceException;
 import com.bookfair.backend.exception.ErrorCode;
@@ -26,10 +27,12 @@ import com.bookfair.backend.exception.ForbiddenException;
 import com.bookfair.backend.exception.ResourceNotFoundException;
 import com.bookfair.backend.model.DeletionAudit;
 import com.bookfair.backend.model.User;
-import com.bookfair.backend.model.User.Role;
+import com.bookfair.backend.model.SystemRole;
 import com.bookfair.backend.repository.ReservationRepository;
 import com.bookfair.backend.repository.UserRepository;
 import com.bookfair.backend.security.CustomUserPrincipal;
+import com.bookfair.backend.event.user.UserDeletedEvent;
+import static java.util.Objects.requireNonNull;
 
 import lombok.RequiredArgsConstructor;
 
@@ -45,6 +48,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserResponse getUserProfile(UUID userId) {
+        requireNonNull(userId, "userId cannot be null");
         User user = userRepository.findByIdAndActiveTrue(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User not found with ID: " + userId,
@@ -109,28 +113,13 @@ public class UserService {
                     ErrorCode.BUSINESS_RULE_VIOLATION);
         }
 
-        if (targetUser.getRole() == Role.SUPER_ADMIN
-                && userRepository.countByRoleAndActiveTrue(Role.SUPER_ADMIN) == 1) {
+        if (targetUser.getSystemRole() == SystemRole.SUPER_ADMIN
+                && userRepository.countBySystemRoleAndActiveTrue(SystemRole.SUPER_ADMIN) == 1) {
             throw new BusinessException("Cannot remove the last administrator", ErrorCode.FORBIDDEN);
         }
 
-        if (requestingUser.getRole() == Role.ORG_ADMIN) {
-            if (requestingUser.getOrganization() == null || targetUser.getOrganization() == null) {
-                throw new ForbiddenException("Operation not permitted: Missing organization context.",
-                        ErrorCode.FORBIDDEN);
-            }
-
-            if (!requestingUser.getOrganization().getId().equals(targetUser.getOrganization().getId())) {
-                throw new ForbiddenException("You cannot delete users outside your organization.", ErrorCode.FORBIDDEN);
-            }
-
-            if (targetUser.getRole() == Role.ORG_ADMIN) {
-                long adminCount = userRepository.countByOrganizationIdAndRoleAndActiveTrue(
-                        targetUser.getOrganization().getId(), Role.ORG_ADMIN);
-                if (adminCount <= 1) {
-                    throw new BusinessException("Cannot delete the last ORG_ADMIN.", ErrorCode.BUSINESS_RULE_VIOLATION);
-                }
-            }
+        if (requestingUser.getSystemRole() != SystemRole.SUPER_ADMIN) {
+            throw new ForbiddenException("Only SUPER_ADMIN can delete users.", ErrorCode.FORBIDDEN);
         }
 
         softDelete(targetUser);
@@ -144,7 +133,7 @@ public class UserService {
                         "User not found with username: " + username,
                         ErrorCode.USER_NOT_FOUND));
 
-        if (user.getRole() == Role.SUPER_ADMIN) {
+        if (user.getSystemRole() == SystemRole.SUPER_ADMIN) {
             throw new BusinessException(
                     "Admin accounts cannot be deactivated",
                     ErrorCode.FORBIDDEN);
@@ -192,57 +181,37 @@ public class UserService {
 
         User requestingUser = getCurrentUser();
 
-        if (targetUser.getRole() == Role.SUPER_ADMIN
-                && updateUserRoleRequest.getRole() != Role.SUPER_ADMIN
-                && userRepository.countByRoleAndActiveTrue(Role.SUPER_ADMIN) == 1) {
+        if (targetUser.getSystemRole() == SystemRole.SUPER_ADMIN
+                && updateUserRoleRequest.getRole() != SystemRole.SUPER_ADMIN
+                && userRepository.countBySystemRoleAndActiveTrue(SystemRole.SUPER_ADMIN) == 1) {
 
             throw new BusinessException("Cannot change the role of last Super admin", ErrorCode.FORBIDDEN);
         }
 
-        if (targetUser.getRole() == Role.SUPER_ADMIN && requestingUser.getRole() != Role.SUPER_ADMIN) {
-            throw new ForbiddenException(
-                    "Cannot modify SUPER_ADMIN accounts",
-                    ErrorCode.FORBIDDEN);
+        if (requestingUser.getSystemRole() != SystemRole.SUPER_ADMIN) {
+            throw new ForbiddenException("Only SUPER_ADMIN can modify system roles", ErrorCode.FORBIDDEN);
         }
 
-        if (requestingUser.getRole() == Role.ORG_ADMIN) {
-            if (requestingUser.getOrganization() == null || targetUser.getOrganization() == null) {
-                throw new ForbiddenException("Operation not permitted: Missing organization context.",
-                        ErrorCode.FORBIDDEN);
-            }
-
-            if (!requestingUser.getOrganization().getId().equals(targetUser.getOrganization().getId())) {
-                throw new ForbiddenException("You cannot modify users outside your organization.", ErrorCode.FORBIDDEN);
-            }
-        }
-
-        if (targetUser.getRole() == Role.ORG_ADMIN && updateUserRoleRequest.getRole() != Role.ORG_ADMIN
-                && targetUser.getOrganization() != null) {
-            long adminCount = userRepository.countByOrganizationIdAndRoleAndActiveTrue(
-                    targetUser.getOrganization().getId(), Role.ORG_ADMIN);
-            if (adminCount <= 1) {
-                throw new BusinessException("Cannot degrade the last ORG_ADMIN.", ErrorCode.BUSINESS_RULE_VIOLATION);
-            }
-        }
-
-        if (requestingUser.getRole() == Role.ORG_ADMIN && updateUserRoleRequest.getRole() == Role.SUPER_ADMIN) {
-            throw new ForbiddenException(
-                    "ORG_ADMIN cannot assign SUPER_ADMIN role",
-                    ErrorCode.FORBIDDEN);
-        }
-
-        if (targetUser.getRole() == updateUserRoleRequest.getRole()) {
+        if (targetUser.getSystemRole() == updateUserRoleRequest.getRole()) {
             throw new BusinessException(
                     "User already has this role",
                     ErrorCode.BUSINESS_RULE_VIOLATION);
         }
 
-        targetUser.setRole(updateUserRoleRequest.getRole());
+        SystemRole oldRole = targetUser.getSystemRole();
 
-        userRepository.save(targetUser);
+        targetUser.setSystemRole(updateUserRoleRequest.getRole());
 
-        publishUserUpdatedEvent(targetUser);
+        User savedUser = userRepository.save(targetUser);
 
+        SystemRole newRole = savedUser.getSystemRole();
+
+        eventPublisher.publishEvent(new UserRoleUpdatedEvent(
+                savedUser.getId(),
+                savedUser.getUsername(),
+                savedUser.getEmail(),
+                newRole.name(),
+                oldRole.name()));
     }
 
     private UUID getCurrentUserId() {
@@ -274,14 +243,16 @@ public class UserService {
                         LocalDateTime.now(),
                         getCurrentUserId()));
         userRepository.save(user);
-        eventPublisher.publishEvent(new com.bookfair.backend.event.user.UserDeletedEvent(user.getId(), user.getUsername(), user.getEmail()));
+        eventPublisher.publishEvent(new UserDeletedEvent(user.getId(),
+                user.getUsername(), user.getEmail()));
     }
 
     private void publishUserUpdatedEvent(User user) {
         eventPublisher.publishEvent(
                 new UserUpdatedEvent(
                         user.getId(),
-                        user.getUsername()));
+                        user.getUsername(),
+                        user.getEmail()));
     }
 
 }

@@ -8,129 +8,141 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import com.bookfair.backend.event.OrganizationDeactivatedEvent;
+import com.bookfair.backend.event.organization.OrganizationDeactivatedEvent;
 import com.bookfair.backend.event.user.UserAccountLockedEvent;
 import com.bookfair.backend.event.user.UserPasswordChangedEvent;
 import com.bookfair.backend.event.user.UserRegisteredEvent;
 import com.bookfair.backend.event.user.PasswordResetRequestedEvent;
 import com.bookfair.backend.event.user.UserEmailVerificationRequestedEvent;
+import com.bookfair.backend.event.user.UserRoleUpdatedEvent;
+import com.bookfair.backend.event.user.UserEmailVerifiedEvent;
 import com.bookfair.backend.event.reservation.ReservationRequestReceivedEvent;
 import com.bookfair.backend.event.reservation.ReservationConfirmedEvent;
 import com.bookfair.backend.event.reservation.ReservationRefundPendingEvent;
 import com.bookfair.backend.event.reservation.ReservationRefundedEvent;
 import com.bookfair.backend.event.reservation.ReservationExpiredEvent;
 import com.bookfair.backend.model.User;
-import com.bookfair.backend.model.User.Role;
+import com.bookfair.backend.model.SystemRole;
+import com.bookfair.backend.model.OrganizationMember;
 import com.bookfair.backend.repository.UserRepository;
+import com.bookfair.backend.repository.OrganizationMemberRepository;
 import com.bookfair.backend.service.NotificationService;
 
+import static java.util.Objects.requireNonNull;
+
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class NotificationEventListener {
-    
+
     private final NotificationService notificationService;
     private final UserRepository userRepository;
+    private final OrganizationMemberRepository memberRepository;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Async("taskExecutor")
     public void handleSecurityNotifications(Object event) {
-        if (event instanceof UserAccountLockedEvent e) {
-            Map<String, Object> vars = Map.of(
-                "userName", e.username(),
-                "supportEmail", "support@bookfair.com"
-            );
-            // Notify User
-            notificationService.notify(e.email(), "Security Alert: Account Locked", "account_locked", vars);
-            
-            // Notify Admins
-            List<User> admins = userRepository.findByRole(Role.SUPER_ADMIN);
-            for (User admin : admins) {
-                Map<String, Object> adminVars = Map.of(
-                    "userName", admin.getUsername(),
-                    "alertMessage", "A user account has been locked due to multiple failed login attempts.",
-                    "affectedUser", e.username()
-                );
-                notificationService.notify(admin.getEmail(), "Admin Alert: User Account Locked", "admin_alert", adminVars);
+        requireNonNull(event, "Event cannot be null");
+        switch (event) {
+            case UserAccountLockedEvent e -> {
+                Map<String, Object> vars = Map.of(
+                        "userName", e.username(),
+                        "supportEmail", "[EMAIL_ADDRESS]");
+                // Notify User
+                notificationService.notify(e.email(), "Security Alert: Account Locked", "account_locked", vars);
+
+                // Notify Admins
+                List<User> admins = userRepository.findBySystemRole(SystemRole.SUPER_ADMIN);
+                for (User admin : admins) {
+                    Map<String, Object> adminVars = Map.of(
+                            "userName", admin.getUsername(),
+                            "alertMessage", "A user account has been locked due to multiple failed login attempts.",
+                            "affectedUser", e.username());
+                    notificationService.notify(admin.getEmail(), "Admin Alert: User Account Locked", "admin_alert",
+                            adminVars);
+                }
             }
-            
-        } else if (event instanceof UserPasswordChangedEvent e) {
-            Map<String, Object> vars = Map.of("userName", e.username());
-            notificationService.notify(e.email(), "Password Changed", "password_changed", vars);
-            
-        } else if (event instanceof UserRegisteredEvent e) {
-            Map<String, Object> vars = Map.of("userName", e.username());
-            notificationService.notify(e.email(), "Welcome!", "welcome", vars);
-            
-        } else if (event instanceof OrganizationDeactivatedEvent e) {
-            List<User> employees = userRepository.findAllByOrganizationId(e.organizationId());
-            for (User employee : employees) {
-                Map<String, Object> vars = Map.of(
-                    "userName", employee.getUsername(),
-                    "orgName", employee.getOrganization() != null ? employee.getOrganization().getName() : "Your Organization",
-                    "deactivationDate", java.time.LocalDate.now().toString()
-                );
-                notificationService.notify(employee.getEmail(), "Organization Deactivated", "org_deactivated", vars);
+            case UserPasswordChangedEvent e -> {
+                Map<String, Object> vars = Map.of("userName", e.username());
+                notificationService.notify(e.email(), "Password Changed", "password_changed", vars);
             }
-        } else if (event instanceof PasswordResetRequestedEvent e) {
-            userRepository.findById(e.userId()).ifPresent(user -> {
-                Map<String, Object> vars = Map.of(
-                    "userName", user.getUsername(),
-                    "resetLink", e.resetLink()
-                );
-                notificationService.notify(user.getEmail(), "Password Reset Request", "password_reset_template", vars);
-            });
-        } else if (event instanceof UserEmailVerificationRequestedEvent e) {
-            userRepository.findById(e.userId()).ifPresent(user -> {
-                Map<String, Object> vars = Map.of(
-                    "userName", user.getUsername(),
-                    "verificationLink", e.verificationLink()
-                );
-                notificationService.notify(user.getEmail(), "Verify Your Email", "email_verification_template", vars);
-            });
-        } else if (event instanceof ReservationRequestReceivedEvent e) {
-            userRepository.findById(e.userId()).ifPresent(user -> {
-                Map<String, Object> vars = Map.of(
-                    "userName", user.getUsername(),
-                    "eventName", e.eventName()
-                );
-                notificationService.notify(user.getEmail(), "Reservation Request Received", "pending", vars);
-            });
-        } else if (event instanceof ReservationConfirmedEvent e) {
-            userRepository.findById(e.userId()).ifPresent(user -> {
+            case UserRegisteredEvent e -> {
+                Map<String, Object> vars = Map.of("userName", e.username());
+                notificationService.notify(e.email(), "Welcome!", "welcome", vars);
+            }
+            case OrganizationDeactivatedEvent e -> {
+                List<OrganizationMember> members = memberRepository.findByOrganizationId(e.organizationId());
+                for (OrganizationMember member : members) {
+                    User employee = member.getUser();
+                    Map<String, Object> vars = Map.of(
+                            "userName", employee.getUsername(),
+                            "orgName",
+                            member.getOrganization() != null ? member.getOrganization().getName()
+                                    : "Your Organization",
+                            "deactivationDate", java.time.LocalDate.now().toString());
+                    notificationService.notify(employee.getEmail(), "Organization Deactivated", "org_deactivated",
+                            vars);
+                }
+            }
+            case PasswordResetRequestedEvent e -> {
+                userRepository.findById(e.userId()).ifPresent(user -> {
+                    Map<String, Object> vars = Map.of(
+                            "userName", user.getUsername(),
+                            "resetLink", e.resetLink());
+                    notificationService.notify(user.getEmail(), "Password Reset Request", "password_reset_template",
+                            vars);
+                });
+            }
+            case UserEmailVerificationRequestedEvent e -> {
+                userRepository.findById(e.userId()).ifPresent(user -> {
+                    Map<String, Object> vars = Map.of(
+                            "userName", user.getUsername(),
+                            "verificationLink", e.verificationLink());
+                    notificationService.notify(user.getEmail(), "Verify Your Email", "email_verification_template",
+                            vars);
+                });
+            }
+            case ReservationRequestReceivedEvent e ->
+                notificationService.notify(e.email(), "Reservation Request Received", "pending",
+                        Map.of("userName", e.username(), "eventName", e.eventName()));
+
+            case ReservationConfirmedEvent e -> {
                 Map<String, Object> vars = new java.util.HashMap<>();
-                vars.put("userName", user.getUsername());
+                vars.put("userName", e.username());
                 vars.put("eventName", e.eventName());
                 if (e.qrCodeBase64() != null) {
                     vars.put("qrCodeBase64", e.qrCodeBase64());
                 }
-                notificationService.notify(user.getEmail(), "Reservation Confirmed - Your Ticket", "confirmed", vars);
-            });
-        } else if (event instanceof ReservationRefundPendingEvent e) {
-            userRepository.findById(e.userId()).ifPresent(user -> {
+                notificationService.notify(e.email(), "Reservation Confirmed - Your Ticket", "confirmed", vars);
+            }
+
+            case ReservationRefundPendingEvent e ->
+                notificationService.notify(e.email(), "Refund Request Received", "refund_pending",
+                        Map.of("userName", e.username(), "eventName", e.eventName()));
+
+            case ReservationRefundedEvent e ->
+                notificationService.notify(e.email(), "Refund Processed Successfully", "refunded",
+                        Map.of("userName", e.username(), "eventName", e.eventName()));
+
+            case ReservationExpiredEvent e ->
+                notificationService.notify(e.email(), "Reservation Expired", "expired",
+                        Map.of("userName", e.username(), "eventName", e.eventName()));
+
+            case UserRoleUpdatedEvent e ->
+                notificationService.notify(e.email(), "Role Updated", "role_updated",
+                        Map.of("userName", e.username(), "oldRole", e.oldRole(), "newRole", e.newRole()));
+
+            case UserEmailVerifiedEvent e -> {
                 Map<String, Object> vars = Map.of(
-                    "userName", user.getUsername(),
-                    "eventName", e.eventName()
-                );
-                notificationService.notify(user.getEmail(), "Refund Request Received", "refund_pending", vars);
-            });
-        } else if (event instanceof ReservationRefundedEvent e) {
-            userRepository.findById(e.userId()).ifPresent(user -> {
-                Map<String, Object> vars = Map.of(
-                    "userName", user.getUsername(),
-                    "eventName", e.eventName()
-                );
-                notificationService.notify(user.getEmail(), "Refund Processed Successfully", "refunded", vars);
-            });
-        } else if (event instanceof ReservationExpiredEvent e) {
-            userRepository.findById(e.userId()).ifPresent(user -> {
-                Map<String, Object> vars = Map.of(
-                    "userName", user.getUsername(),
-                    "eventName", e.eventName()
-                );
-                notificationService.notify(user.getEmail(), "Reservation Expired", "expired", vars);
-            });
+                        "userName", e.username());
+                notificationService.notify(e.email(), "Email Verified", "email_verified", vars);
+            }
+            default -> {
+                log.debug("Ignored event type in notification listener: {}", event.getClass().getSimpleName());
+            }
         }
     }
 }

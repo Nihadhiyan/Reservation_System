@@ -22,6 +22,7 @@ import com.bookfair.backend.repository.FloorRepository;
 import com.bookfair.backend.repository.VenueRepository;
 
 import lombok.RequiredArgsConstructor;
+import static java.util.Objects.requireNonNull;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +36,7 @@ public class BuildingService {
 
     @Transactional
     public BuildingResponse createBuilding(CreateBuildingRequest request) {
+        requireNonNull(request, "request cannot be null");
         Venue venue = venueRepository.findById(request.getVenueId())
                 .orElseThrow(() -> new ResourceNotFoundException("Venue not found", ErrorCode.VENUE_NOT_FOUND));
 

@@ -1,7 +1,5 @@
 package com.bookfair.backend.service;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -25,15 +23,19 @@ import com.bookfair.backend.dto.user.request.ChangePasswordRequest;
 import com.bookfair.backend.event.user.UserAccountLockedEvent;
 import com.bookfair.backend.event.user.UserPasswordChangedEvent;
 import com.bookfair.backend.event.user.UserRegisteredEvent;
-import com.bookfair.backend.event.user.UserUpdatedEvent;
 import com.bookfair.backend.event.user.PasswordResetRequestedEvent;
 import com.bookfair.backend.event.user.UserEmailVerificationRequestedEvent;
+import com.bookfair.backend.event.user.UserEmailVerifiedEvent;
 import com.bookfair.backend.exception.BusinessException;
 import com.bookfair.backend.exception.DuplicateResourceException;
 import com.bookfair.backend.exception.ErrorCode;
 import com.bookfair.backend.exception.ResourceNotFoundException;
 import com.bookfair.backend.model.Organization;
 import com.bookfair.backend.model.User;
+import com.bookfair.backend.model.OrganizationMember;
+import com.bookfair.backend.model.OrganizationRole;
+import com.bookfair.backend.model.SystemRole;
+import com.bookfair.backend.repository.OrganizationMemberRepository;
 import com.bookfair.backend.repository.OrganizationRepository;
 import com.bookfair.backend.repository.UserRepository;
 import com.bookfair.backend.security.CustomUserDetailsService;
@@ -51,6 +53,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final OrganizationRepository organizationRepository;
+    private final OrganizationMemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final AuthMapper authMapper;
@@ -64,13 +67,6 @@ public class AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest registerRequest) {
 
-        if (registerRequest.getRole() == User.Role.ORG_EMPLOYEE || registerRequest.getRole() == User.Role.SUPER_ADMIN) {
-            throw new BusinessException(
-                "Employees and Admins cannot register directly. Please ask your organization administrator to invite you.", 
-                ErrorCode.FORBIDDEN
-            );
-        }
-
         if (userRepository.existsByUsernameAndActiveTrue(registerRequest.getUsername())) {
             throw new DuplicateResourceException("Username is already taken", ErrorCode.DUPLICATE_USERNAME);
         }
@@ -79,20 +75,19 @@ public class AuthService {
             throw new DuplicateResourceException("Email is already registered", ErrorCode.DUPLICATE_EMAIL);
         }
 
-        
-
         Organization savedOrganization = null;
 
-        if (registerRequest.getRole() == User.Role.ORG_ADMIN) {
+        if (registerRequest.isRegisterAsOrgAdmin()) {
             if (registerRequest.getOrganizationName() == null || registerRequest.getOrganizationName().isBlank()) {
-                throw new BusinessException("Organization name is required for business accounts.", ErrorCode.VALIDATION_ERROR);
+                throw new BusinessException("Organization name is required for business accounts.",
+                        ErrorCode.VALIDATION_ERROR);
             }
 
             if (organizationRepository.existsByNameAndActiveTrue(registerRequest.getOrganizationName())) {
                 throw new DuplicateResourceException(
-                    "An organization with the name '" + registerRequest.getOrganizationName() + "' already exists. If you work here, please ask your admin for an invite.", 
-                    ErrorCode.BUSINESS_RULE_VIOLATION
-                );
+                        "An organization with the name '" + registerRequest.getOrganizationName()
+                                + "' already exists. If you work here, please ask your admin for an invite.",
+                        ErrorCode.BUSINESS_RULE_VIOLATION);
             }
 
             Organization organization = new Organization();
@@ -109,11 +104,20 @@ public class AuthService {
         User user = authMapper.toUserFromRegisterRequest(registerRequest);
 
         user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
-        user.setOrganization(savedOrganization);
+        user.setSystemRole(SystemRole.CUSTOMER); // Base role for all regular signups
 
         User savedUser = userRepository.save(user);
 
-        eventPublisher.publishEvent(new UserRegisteredEvent(savedUser.getId(), savedUser.getUsername(), savedUser.getEmail()));
+        if (savedOrganization != null) {
+            OrganizationMember member = new OrganizationMember();
+            member.setUser(savedUser);
+            member.setOrganization(savedOrganization);
+            member.setRole(OrganizationRole.ORG_ADMIN);
+            memberRepository.save(member);
+        }
+
+        eventPublisher.publishEvent(
+                new UserRegisteredEvent(savedUser.getId(), savedUser.getUsername(), savedUser.getEmail()));
 
         String accessToken = jwtService.generateAccessToken(savedUser);
         String refreshToken = jwtService.generateRefreshToken(savedUser);
@@ -127,7 +131,8 @@ public class AuthService {
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest loginRequest) {
         if (loginAttemptService.isLocked(loginRequest.getUsername())) {
-            throw new BusinessException("Account is locked due to too many failed login attempts.", ErrorCode.FORBIDDEN);
+            throw new BusinessException("Account is locked due to too many failed login attempts.",
+                    ErrorCode.FORBIDDEN);
         }
 
         try {
@@ -139,7 +144,8 @@ public class AuthService {
             loginAttemptService.recordFailedAttempt(loginRequest.getUsername());
             if (loginAttemptService.isLocked(loginRequest.getUsername())) {
                 userRepository.findByUsernameAndActiveTrue(loginRequest.getUsername())
-                    .ifPresent(u -> eventPublisher.publishEvent(new UserAccountLockedEvent(u.getId(), u.getUsername(), u.getEmail())));
+                        .ifPresent(u -> eventPublisher
+                                .publishEvent(new UserAccountLockedEvent(u.getId(), u.getUsername(), u.getEmail())));
             }
             throw new BusinessException("Invalid username or password", ErrorCode.UNAUTHORIZED);
         }
@@ -147,7 +153,8 @@ public class AuthService {
         loginAttemptService.resetAttempts(loginRequest.getUsername());
 
         User user = userRepository.findByUsernameAndActiveTrue(loginRequest.getUsername())
-                .orElseThrow(() -> new ResourceNotFoundException("Invalid username or password", ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Invalid username or password", ErrorCode.USER_NOT_FOUND));
 
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
@@ -158,14 +165,14 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public AuthResponse refreshToken (RefreshTokenRequest refreshTokenRequest) {
+    public AuthResponse refreshToken(RefreshTokenRequest refreshTokenRequest) {
         UUID userId = jwtService.extractUserId(refreshTokenRequest.getRefreshToken());
 
         UserDetails userDetails = userDetailsService.loadUserById(userId);
 
         if (jwtService.validateToken(refreshTokenRequest.getRefreshToken(), userDetails)) {
             User user = userRepository.findByIdAndActiveTrue(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
 
             String newAccessToken = jwtService.generateAccessToken(user);
             String newRefreshToken = jwtService.generateRefreshToken(user);
@@ -188,22 +195,21 @@ public class AuthService {
         }
 
         String token = authHeader.substring(7);
-       
+
         long remainingTime = jwtService.getRemainingExpirationTime(token);
 
         if (remainingTime > 0) {
             try {
                 securityManagementService.blacklistToken(token, remainingTime);
-                
-                String username = jwtService.extractUsername(token);
-                userRepository.findByUsernameAndActiveTrue(username).ifPresent(user -> {
+                UUID userId = jwtService.extractUserId(token);
+                userRepository.findByIdAndActiveTrue(userId).ifPresent(user -> {
                     securityManagementService.removeSession(user.getId(), token);
                 });
 
                 log.info("Token successfully blacklisted and session removed.");
-            }
-            catch (Exception e) {
-                log.warn("Failed to blacklist token or remove session: {}. Token will expire naturally.", e.getMessage());
+            } catch (Exception e) {
+                log.warn("Failed to blacklist token or remove session: {}. Token will expire naturally.",
+                        e.getMessage());
             }
         }
     }
@@ -212,14 +218,14 @@ public class AuthService {
         userRepository.findByEmailAndActiveTrue(email).ifPresent(user -> {
             String resetToken = jwtService.generatePasswordResetToken(user);
             tokenManagementService.storePasswordResetToken(
-                user.getId().toString(),
-                resetToken,
-                15,
-                TimeUnit.MINUTES);
+                    user.getId().toString(),
+                    resetToken,
+                    15,
+                    TimeUnit.MINUTES);
 
             String resetLink = "https://clausis.com/reset-password?token=" + resetToken;
 
-            eventPublisher.publishEvent(new PasswordResetRequestedEvent(user.getId(), resetLink));
+            eventPublisher.publishEvent(new PasswordResetRequestedEvent(user.getId(), resetLink, user.getEmail()));
         });
     }
 
@@ -240,35 +246,34 @@ public class AuthService {
         }
 
         User user = userRepository.findByIdAndActiveTrue(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        eventPublisher.publishEvent(new UserUpdatedEvent(user.getId(), user.getUsername()));
         eventPublisher.publishEvent(new UserPasswordChangedEvent(user.getId(), user.getUsername(), user.getEmail()));
     }
 
     @Transactional
-    public void changePassword(ChangePasswordRequest changePasswordRequest){
+    public void changePassword(ChangePasswordRequest changePasswordRequest) {
         UUID currentUserId = getCurrentUserId();
-        
+
         User user = userRepository.findByIdAndActiveTrue(currentUserId)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
 
         if (!passwordEncoder.matches(changePasswordRequest.getOldPassword(), user.getPassword())) {
             throw new BusinessException("Incorrect current password", ErrorCode.UNAUTHORIZED);
         }
 
         if (passwordEncoder.matches(changePasswordRequest.getNewPassword(), user.getPassword())) {
-            throw new BusinessException("New password cannot be the same as the old password", ErrorCode.BUSINESS_RULE_VIOLATION);
+            throw new BusinessException("New password cannot be the same as the old password",
+                    ErrorCode.BUSINESS_RULE_VIOLATION);
         }
 
         user.setPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
         userRepository.save(user);
 
-        eventPublisher.publishEvent(new UserUpdatedEvent(user.getId(), user.getUsername()));
-        eventPublisher.publishEvent(new UserPasswordChangedEvent(user.getId()));
+        eventPublisher.publishEvent(new UserPasswordChangedEvent(user.getId(), user.getUsername(), user.getEmail()));
 
     }
 
@@ -292,7 +297,7 @@ public class AuthService {
         }
 
         User user = userRepository.findByIdAndActiveTrue(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
 
         if (Boolean.TRUE.equals(user.getEmailVerified())) {
             throw new DuplicateResourceException("Email Already Verified.", ErrorCode.UNAUTHORIZED);
@@ -301,21 +306,22 @@ public class AuthService {
         user.setEmailVerified(true);
         userRepository.save(user);
 
-        eventPublisher.publishEvent(new UserUpdatedEvent(user.getId(), user.getUsername()));
+        eventPublisher.publishEvent(new UserEmailVerifiedEvent(user.getId(), user.getUsername(), user.getEmail()));
     }
 
-    public void sendVerificationEmail (String email) {
+    public void sendVerificationEmail(String email) {
         userRepository.findByEmailAndActiveTrue(email).ifPresent(user -> {
             String verificationToken = jwtService.generateVerificationToken(user);
             tokenManagementService.storeEmailVerificationToken(
-                user.getId().toString(),
-                verificationToken,
-                24,
-                TimeUnit.HOURS);
+                    user.getId().toString(),
+                    verificationToken,
+                    24,
+                    TimeUnit.HOURS);
 
             String verificationLink = "https://clausis.com/verify-email?token=" + verificationToken;
 
-            eventPublisher.publishEvent(new UserEmailVerificationRequestedEvent(user.getId(), verificationLink));
+            eventPublisher.publishEvent(
+                    new UserEmailVerificationRequestedEvent(user.getId(), verificationLink, user.getEmail()));
         });
     }
 

@@ -14,12 +14,13 @@ import com.bookfair.backend.event.payment.PaymentCompletedEvent;
 import com.bookfair.backend.exception.BusinessException;
 import com.bookfair.backend.exception.ErrorCode;
 import com.bookfair.backend.exception.ResourceNotFoundException;
-import com.bookfair.backend.integration.payment.gateways.PaymentGateway;
-import com.bookfair.backend.integration.payment.gateways.PaymentGateway.PaymentWebhookResult;
+import com.bookfair.backend.integration.payment.PaymentGateway;
+import com.bookfair.backend.integration.payment.PaymentGateway.PaymentWebhookResult;
 import com.bookfair.backend.model.Payment;
 import com.bookfair.backend.model.Reservation;
 import com.bookfair.backend.repository.PaymentRepository;
 import com.bookfair.backend.repository.ReservationRepository;
+import static java.util.Objects.requireNonNull;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,20 +32,30 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final ReservationRepository reservationRepository;
+    private final PricingEngineService pricingEngineService;
     private final PaymentMapper paymentMapper;
     private final List<PaymentGateway> paymentGateways;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public PaymentResponse initializePayment(CreatePaymentRequest request, String gatewayType) {
+        requireNonNull(request, "request cannot be null");
         Reservation reservation = reservationRepository.findById(request.getReservationId())
                 .orElseThrow(
                         () -> new ResourceNotFoundException("Reservation not found", ErrorCode.RESERVATION_NOT_FOUND));
 
+        java.math.BigDecimal calculatedTotal = pricingEngineService.calculateTotalForReservation(reservation);
+        if (request.getAmount().compareTo(calculatedTotal) != 0) {
+            throw new BusinessException(
+                    "Price mismatch: requested " + request.getAmount() + " but calculated " + calculatedTotal,
+                    ErrorCode.PRICE_MISMATCH);
+        }
+
         PaymentGateway adapter = paymentGateways.stream()
                 .filter(gateway -> gateway.supports(gatewayType))
                 .findFirst()
-                .orElseThrow(() -> new BusinessException("Unsupported payment gateway: " + gatewayType, ErrorCode.BUSINESS_RULE_VIOLATION));
+                .orElseThrow(() -> new BusinessException("Unsupported payment gateway: " + gatewayType,
+                        ErrorCode.BUSINESS_RULE_VIOLATION));
 
         PaymentResponse response = adapter.initializePayment(request);
 
@@ -60,12 +71,15 @@ public class PaymentService {
         return paymentMapper.toPaymentResponse(saved);
     }
 
+    // External event listeners must use Propagation.REQUIRES_NEW to ensure database
+    // state integrity.
     @Transactional
     public void processWebhook(String payload, String signatureHeader, String gatewayType) {
         PaymentGateway adapter = paymentGateways.stream()
                 .filter(gateway -> gateway.supports(gatewayType))
                 .findFirst()
-                .orElseThrow(() -> new BusinessException("Unsupported payment gateway: " + gatewayType, ErrorCode.BUSINESS_RULE_VIOLATION));
+                .orElseThrow(() -> new BusinessException("Unsupported payment gateway: " + gatewayType,
+                        ErrorCode.BUSINESS_RULE_VIOLATION));
 
         PaymentWebhookResult result = adapter.processWebhook(payload, signatureHeader);
 
@@ -78,14 +92,20 @@ public class PaymentService {
                 .orElseGet(() -> {
                     // Fallback to searching by reservationId if transaction ID wasn't saved yet
                     Reservation reservation = reservationRepository.findById(result.reservationId())
-                            .orElseThrow(() -> new ResourceNotFoundException("Reservation not found", ErrorCode.RESERVATION_NOT_FOUND));
-                    
+                            .orElseThrow(() -> new ResourceNotFoundException("Reservation not found",
+                                    ErrorCode.RESERVATION_NOT_FOUND));
+
                     Payment newPayment = new Payment();
                     newPayment.setReservation(reservation);
                     newPayment.setTransactionId(result.transactionId());
                     newPayment.setAmount(result.amount());
                     return newPayment;
                 });
+
+        if (payment.getStatus() == Payment.PaymentStatus.COMPLETED) {
+            log.info("Idempotency Check: Payment {} is already COMPLETED. Ignoring webhook.", payment.getId());
+            return;
+        }
 
         Payment.PaymentStatus status = Payment.PaymentStatus.valueOf(result.paymentStatus().toUpperCase());
         payment.setStatus(status);

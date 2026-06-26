@@ -42,7 +42,6 @@ public class GenreService {
 
         Genre genre = new Genre();
         genre.setName(request.getName());
-        genre.setDescription(request.getDescription());
         genre.setActive(true);
 
         Genre saved = genreRepository.save(genre);

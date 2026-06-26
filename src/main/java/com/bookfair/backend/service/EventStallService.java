@@ -19,6 +19,7 @@ import com.bookfair.backend.model.Stall;
 import com.bookfair.backend.repository.EventRepository;
 import com.bookfair.backend.repository.EventStallRepository;
 import com.bookfair.backend.repository.StallRepository;
+import static java.util.Objects.requireNonNull;
 
 import lombok.RequiredArgsConstructor;
 
@@ -33,6 +34,7 @@ public class EventStallService {
 
     @Transactional
     public EventStallResponse assignStallToEvent(CreateEventStallRequest request) {
+        requireNonNull(request, "request cannot be null");
         Event event = eventRepository.findByIdAndActiveTrue(request.getEventId())
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found", ErrorCode.EVENT_NOT_FOUND));
 
@@ -41,12 +43,17 @@ public class EventStallService {
 
         eventStallRepository.findByEventIdAndStallId(request.getEventId(), request.getStallId())
                 .ifPresent(existing -> {
-                    throw new BusinessException("Stall is already assigned to this event.", ErrorCode.BUSINESS_RULE_VIOLATION);
+                    throw new BusinessException("Stall is already assigned to this event.",
+                            ErrorCode.BUSINESS_RULE_VIOLATION);
                 });
 
         EventStall eventStall = new EventStall();
         eventStall.setEvent(event);
         eventStall.setStall(stall);
+        eventStall.setStallNameAtCreation(stall.getName());
+        eventStall.setHallIdSnapshot(stall.getHall().getId());
+        eventStall.setHallNameAtCreation(stall.getHall().getName());
+        eventStall.setLayout(stall.getLayout());
         eventStall.setBasePrice(request.getBasePrice());
         eventStall.setManualOverridePrice(request.getManualOverridePrice());
         eventStall.setStatus(EventStall.AvailabilityStatus.valueOf(request.getStatus().toUpperCase()));
@@ -82,7 +89,8 @@ public class EventStallService {
                 .orElseThrow(() -> new ResourceNotFoundException("Event stall not found", ErrorCode.EVENT_NOT_FOUND));
 
         if (eventStall.getStatus() == EventStall.AvailabilityStatus.BOOKED) {
-            throw new BusinessException("Cannot remove a booked stall from the event.", ErrorCode.BUSINESS_RULE_VIOLATION);
+            throw new BusinessException("Cannot remove a booked stall from the event.",
+                    ErrorCode.BUSINESS_RULE_VIOLATION);
         }
 
         eventStallRepository.delete(eventStall);
@@ -95,7 +103,32 @@ public class EventStallService {
         }
 
         return eventStallRepository.findAllByEventIdWithStallData(eventId).stream()
+                .filter(EventStall::getActive)
                 .map(eventMapper::toEventStallResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<EventStallResponse> copyAllStallsFromHall(UUID eventId, UUID hallId) {
+        Event event = eventRepository.findByIdAndActiveTrue(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found", ErrorCode.EVENT_NOT_FOUND));
+
+        List<Stall> stalls = stallRepository.findByHallIdAndActiveTrue(hallId);
+
+        List<EventStall> newEventStalls = stalls.stream().map(stall -> {
+            EventStall eventStall = new EventStall();
+            eventStall.setEvent(event);
+            eventStall.setStall(stall);
+            eventStall.setStallNameAtCreation(stall.getName());
+            eventStall.setHallIdSnapshot(stall.getHall().getId());
+            eventStall.setHallNameAtCreation(stall.getHall().getName());
+            eventStall.setLayout(stall.getLayout());
+            eventStall.setBasePrice(java.math.BigDecimal.ZERO);
+            eventStall.setStatus(EventStall.AvailabilityStatus.AVAILABLE);
+            return eventStall;
+        }).collect(Collectors.toList());
+
+        List<EventStall> savedStalls = eventStallRepository.saveAll(newEventStalls);
+        return savedStalls.stream().map(eventMapper::toEventStallResponse).collect(Collectors.toList());
     }
 }

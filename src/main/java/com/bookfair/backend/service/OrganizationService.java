@@ -23,10 +23,16 @@ import com.bookfair.backend.exception.ResourceNotFoundException;
 import com.bookfair.backend.model.DeletionAudit;
 import com.bookfair.backend.model.Organization;
 import com.bookfair.backend.model.User;
-import com.bookfair.backend.model.User.Role;
+import com.bookfair.backend.model.SystemRole;
+import com.bookfair.backend.model.OrganizationRole;
+import com.bookfair.backend.model.OrganizationMember;
 import com.bookfair.backend.repository.OrganizationRepository;
 import com.bookfair.backend.repository.UserRepository;
+import com.bookfair.backend.repository.OrganizationMemberRepository;
 import com.bookfair.backend.security.CustomUserPrincipal;
+import com.bookfair.backend.event.organization.OrganizationDeactivatedEvent;
+import com.bookfair.backend.event.organization.OrganizationCapabilityChangedEvent;
+import static java.util.Objects.requireNonNull;
 
 import lombok.RequiredArgsConstructor;
 
@@ -36,11 +42,13 @@ public class OrganizationService {
 
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
+    private final OrganizationMemberRepository memberRepository;
     private final OrganizationMapper organizationMapper;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional(readOnly = true)
     public Page<OrganizationResponse> getAllOrganizations(Pageable pageable) {
+        requireNonNull(pageable, "pageable cannot be null");
         return organizationRepository.findAllByActiveTrue(pageable)
                 .map(organizationMapper::toOrganizationResponse);
     }
@@ -75,15 +83,11 @@ public class OrganizationService {
 
         User requestingUser = getCurrentUser();
 
-        if (requestingUser.getRole() == Role.ORG_ADMIN) {
-            if (requestingUser.getOrganization() == null) {
-                throw new ForbiddenException("Operation not permitted: Missing organization context.",
-                        ErrorCode.FORBIDDEN);
-            }
-
-            if (!requestingUser.getOrganization().getId().equals(organization.getId())) {
-                throw new ForbiddenException("You cannot modify organizations outside your context.",
-                        ErrorCode.FORBIDDEN);
+        if (requestingUser.getSystemRole() != SystemRole.SUPER_ADMIN) {
+            OrganizationMember member = memberRepository.findByUserIdAndOrganizationId(requestingUser.getId(), organization.getId())
+                    .orElse(null);
+            if (member == null || member.getRole() != OrganizationRole.ORG_ADMIN) {
+                throw new ForbiddenException("You cannot modify organizations outside your context.", ErrorCode.FORBIDDEN);
             }
         }
 
@@ -95,21 +99,21 @@ public class OrganizationService {
                     ErrorCode.DUPLICATE_ORGANIZATION_NAME);
         }
 
-        java.util.Set<com.bookfair.backend.model.Organization.OrganizationCapability> oldCapabilities = new java.util.HashSet<>(organization.getCapabilities());
+        java.util.Set<com.bookfair.backend.model.Organization.OrganizationCapability> oldCapabilities = new java.util.HashSet<>(
+                organization.getCapabilities());
 
         organizationMapper.updateOrganizationFromOrganizationRequest(request, organization);
         Organization updatedOrganization = organizationRepository.save(organization);
 
         // We check for equality before publishing to avoid unnecessary events.
-        // Firing events on every update (even when capabilities didn't change) creates unnecessary processing overhead
+        // Firing events on every update (even when capabilities didn't change) creates
+        // unnecessary processing overhead
         // and could trigger unintended side effects.
         if (!oldCapabilities.equals(organization.getCapabilities())) {
             applicationEventPublisher.publishEvent(
-                    new com.bookfair.backend.event.OrganizationCapabilityChangedEvent(
+                    new OrganizationCapabilityChangedEvent(
                             organization.getId(),
-                            organization.getCapabilities()
-                    )
-            );
+                            organization.getCapabilities()));
         }
 
         return organizationMapper.toOrganizationResponse(updatedOrganization);
@@ -123,15 +127,11 @@ public class OrganizationService {
 
         User requestingUser = getCurrentUser();
 
-        if (requestingUser.getRole() == Role.ORG_ADMIN) {
-            if (requestingUser.getOrganization() == null) {
-                throw new ForbiddenException("Operation not permitted: Missing organization context.",
-                        ErrorCode.FORBIDDEN);
-            }
-
-            if (!requestingUser.getOrganization().getId().equals(organization.getId())) {
-                throw new ForbiddenException("You cannot deactivate organizations outside your context.",
-                        ErrorCode.FORBIDDEN);
+        if (requestingUser.getSystemRole() != SystemRole.SUPER_ADMIN) {
+            OrganizationMember member = memberRepository.findByUserIdAndOrganizationId(requestingUser.getId(), organization.getId())
+                    .orElse(null);
+            if (member == null || member.getRole() != OrganizationRole.ORG_ADMIN) {
+                throw new ForbiddenException("You cannot deactivate organizations outside your context.", ErrorCode.FORBIDDEN);
             }
         }
 
@@ -150,26 +150,31 @@ public class OrganizationService {
         throw new BusinessException("Unable to resolve current user", ErrorCode.UNAUTHORIZED);
     }
 
-    // Centralizing current-user retrieval improves maintainability by eliminating duplicate code
-    // across the service methods. It also ensures consistent error handling if the current user cannot be found.
+    // Centralizing current-user retrieval improves maintainability by eliminating
+    // duplicate code
+    // across the service methods. It also ensures consistent error handling if the
+    // current user cannot be found.
     private User getCurrentUser() {
         return userRepository.findById(getCurrentUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
     }
 
     // Soft-delete logic is extracted to a single place to ensure consistency.
-    // If the audit details or active flag logic change in the future, only this method needs updating.
+    // If the audit details or active flag logic change in the future, only this
+    // method needs updating.
     private void softDelete(Organization organization) {
         organization.setActive(false);
         organization.setDeletionAudit(new DeletionAudit(LocalDateTime.now(), getCurrentUserId()));
         organizationRepository.save(organization);
     }
 
-    // Events are used to avoid direct service coupling. This allows other parts of the system 
-    // (like listeners) to react to organization deactivation without tightly coupling the 
+    // Events are used to avoid direct service coupling. This allows other parts of
+    // the system
+    // (like listeners) to react to organization deactivation without tightly
+    // coupling the
     // OrganizationService to User or Cache services.
     private void publishOrganizationDeactivatedEvent(UUID organizationId) {
         applicationEventPublisher.publishEvent(
-                new com.bookfair.backend.event.OrganizationDeactivatedEvent(organizationId));
+                new OrganizationDeactivatedEvent(organizationId, getCurrentUserId()));
     }
 }

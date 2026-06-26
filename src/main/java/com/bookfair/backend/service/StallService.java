@@ -17,6 +17,7 @@ import com.bookfair.backend.exception.ErrorCode;
 import com.bookfair.backend.exception.ResourceNotFoundException;
 import com.bookfair.backend.model.Stall;
 import com.bookfair.backend.repository.StallRepository;
+import static java.util.Objects.requireNonNull;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ public class StallService {
 
     @Transactional(readOnly = true)
     public List<StallResponse> getAllStallsForHall(UUID hallId) {
+        requireNonNull(hallId, "hallId cannot be null");
         return stallRepository.findByHallIdAndActiveTrue(hallId).stream()
                 .map(stallMapper::toStallResponse).toList();
     }
@@ -39,8 +41,9 @@ public class StallService {
     @Transactional(readOnly = true)
     public StallResponse getStallById(UUID id) {
         Stall stall = stallRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Physical Stall not found", ErrorCode.STALL_NOT_FOUND));
-        
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Physical Stall not found", ErrorCode.STALL_NOT_FOUND));
+
         return stallMapper.toStallResponse(stall);
     }
 
@@ -52,12 +55,11 @@ public class StallService {
 
         savedStalls.forEach(savedStall -> {
             eventPublisher.publishEvent(new StallCreatedEvent(
-                    savedStall.getId(), 
-                    savedStall.getStallNumber(), 
-                    savedStall.getHall().getId(), 
-                    currentUser
-            ));
-            log.info("Stall {} created successfully", savedStall.getStallNumber());
+                    savedStall.getId(),
+                    savedStall.getName(),
+                    savedStall.getHall().getId(),
+                    currentUser));
+            log.info("Stall {} created successfully", savedStall.getName());
         });
 
         return savedStalls.stream().map(stallMapper::toStallResponse).toList();
@@ -66,21 +68,21 @@ public class StallService {
     @Transactional
     public StallResponse updateStall(UUID id, UpdateStallRequest stallRequest) {
         Stall stall = stallRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Physical Stall not found", ErrorCode.STALL_NOT_FOUND));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Physical Stall not found", ErrorCode.STALL_NOT_FOUND));
 
-        String oldStatus = stall.getStatus();
+        String oldStatus = stall.getActive() ? "ACTIVE" : "INACTIVE";
 
         stallMapper.updateStallFromStallRequest(stallRequest, stall);
 
         Stall updatedStall = stallRepository.save(stall);
 
-        if (stallRequest.getStatus() != null && !stallRequest.getStatus().equals(oldStatus)) {
+        if (stallRequest.getActive() != null && !(stallRequest.getActive() ? "ACTIVE" : "INACTIVE").equals(oldStatus)) {
             eventPublisher.publishEvent(new StallStatusChangedEvent(
-                    updatedStall.getId(), 
-                    updatedStall.getStallNumber(), 
-                    oldStatus, 
-                    updatedStall.getStatus()
-            ));
+                    updatedStall.getId(),
+                    updatedStall.getName(),
+                    oldStatus,
+                    updatedStall.getActive() ? "ACTIVE" : "INACTIVE"));
         }
 
         return stallMapper.toStallResponse(updatedStall);
@@ -89,19 +91,19 @@ public class StallService {
     @Transactional
     public StallResponse updateStallStatus(UUID stallId, String newStatus) {
         Stall stall = stallRepository.findById(stallId)
-            .orElseThrow(() -> new ResourceNotFoundException("Physical Stall not found", ErrorCode.STALL_NOT_FOUND));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Physical Stall not found", ErrorCode.STALL_NOT_FOUND));
 
-        String oldStatus = stall.getStatus();
-        stall.setStatus(newStatus);
-        
+        String oldStatus = stall.getActive() ? "ACTIVE" : "INACTIVE";
+        stall.setActive("ACTIVE".equalsIgnoreCase(newStatus));
+
         Stall updatedStall = stallRepository.save(stall);
 
         eventPublisher.publishEvent(new StallStatusChangedEvent(
-                updatedStall.getId(), 
-                updatedStall.getStallNumber(), 
-                oldStatus, 
-                newStatus
-        ));
+                updatedStall.getId(),
+                updatedStall.getName(),
+                oldStatus,
+                newStatus));
 
         return stallMapper.toStallResponse(updatedStall);
     }
@@ -115,7 +117,7 @@ public class StallService {
     @Transactional
     public void deactivateStall(List<UUID> ids) {
         List<Stall> stalls = stallRepository.findAllByIdInAndActiveTrue(ids);
-        for(Stall stall : stalls) {
+        for (Stall stall : stalls) {
             stall.setActive(false);
         }
         stallRepository.saveAll(stalls);

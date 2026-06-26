@@ -10,6 +10,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+import static java.util.Objects.requireNonNull;
 
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +20,15 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class EmailService {
- 
+
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
 
     @Async
-    public void sendEmail(String to, String subject, String templateName, Map<String, Object> variables, String qrBase64) {
+    public void sendEmail(String to, String subject, String templateName, Map<String, Object> variables,
+            String qrBase64) {
+        requireNonNull(to, "to cannot be null");
+        requireNonNull(templateName, "templateName cannot be null");
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -42,7 +46,7 @@ public class EmailService {
 
             helper.setText(htmlBody, true);
 
-            if(hasQrCode) {
+            if (hasQrCode) {
                 byte[] decodedImg = Base64.getDecoder().decode(qrBase64);
                 helper.addInline("qrCode", new ByteArrayResource(decodedImg), "image/png");
             }

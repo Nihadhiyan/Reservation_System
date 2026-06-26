@@ -15,6 +15,7 @@ import com.bookfair.backend.model.LayoutPosition;
 import com.bookfair.backend.model.Stall;
 import com.bookfair.backend.repository.HallRepository;
 import com.bookfair.backend.repository.StallRepository;
+import static java.util.Objects.requireNonNull;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +29,9 @@ public class LayoutGenerationService {
     private final StallRepository stallRepository;
 
     @Transactional
-    public List<Stall> autoGenerateStallGrid(UUID hallId, int rows, int columns, int stallWidth, int stallLength, int aisleWidth, int startX, int startY) {
+    public List<Stall> autoGenerateStallGrid(UUID hallId, int rows, int columns, int stallWidth, int stallLength,
+            int aisleWidth, int startX, int startY) {
+        requireNonNull(hallId, "hallId cannot be null");
         Hall hall = hallRepository.findById(hallId)
                 .orElseThrow(() -> new ResourceNotFoundException("Hall not found", ErrorCode.HALL_NOT_FOUND));
 
@@ -42,14 +45,15 @@ public class LayoutGenerationService {
             for (int c = 0; c < columns; c++) {
                 Stall stall = new Stall();
                 stall.setHall(hall);
-                stall.setStallNumber(String.format("%s-%d", hall.getName().substring(0, Math.min(3, hall.getName().length())).toUpperCase(), stallCounter++));
-                stall.setAreaSquareFootage(stallWidth * stallLength);
-                stall.setStatus("AVAILABLE");
+                stall.setName(String.format("%s-%d",
+                        hall.getName().substring(0, Math.min(3, hall.getName().length())).toUpperCase(),
+                        stallCounter++));
+                stall.setSquareFootage((double) (stallWidth * stallLength));
                 stall.setActive(true);
-                
+
                 LayoutPosition layout = new LayoutPosition(currentX, currentY, stallWidth, stallLength);
                 stall.setLayout(layout);
-                
+
                 newStalls.add(stall);
 
                 currentX += stallWidth + aisleWidth;
@@ -70,8 +74,7 @@ public class LayoutGenerationService {
                 layoutPositionDto.getXCoord(),
                 layoutPositionDto.getYCoord(),
                 layoutPositionDto.getWidth(),
-                layoutPositionDto.getHeight()
-        );
+                layoutPositionDto.getHeight());
         stall.setLayout(newLayout);
 
         log.info("Updated coordinates for stall {}", stallId);

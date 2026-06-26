@@ -33,7 +33,7 @@ public class SecurityManagementService {
     }
 
     private void revokeTokens(UUID userId) {
-        String sessionKey = "user_sessiions:" + userId; // Match typo in JwtService "user_sessiions"
+        String sessionKey = "user_sessions:" + userId;
 
         // Getting all session tokens for this user
         Set<String> tokens = redisTemplate.opsForSet().members(sessionKey);

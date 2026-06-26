@@ -1,4 +1,4 @@
-package com.bookfair.backend.integration.payment.gateways;
+package com.bookfair.backend.integration.payment;
 
 import java.math.BigDecimal;
 import java.util.UUID;

@@ -22,6 +22,7 @@ import com.bookfair.backend.repository.BuildingRepository;
 import com.bookfair.backend.repository.HallRepository;
 import com.bookfair.backend.repository.LayoutMarkerRepository;
 import com.bookfair.backend.repository.VenueRepository;
+import static java.util.Objects.requireNonNull;
 
 import lombok.RequiredArgsConstructor;
 
@@ -37,13 +38,18 @@ public class LayoutMarkerService {
 
     @Transactional
     public LayoutMarkerDto createLayoutMarker(CreateLayoutMarkerRequest request) {
+        requireNonNull(request, "request cannot be null");
         int parentCount = 0;
-        if (request.getVenueId() != null) parentCount++;
-        if (request.getBuildingId() != null) parentCount++;
-        if (request.getHallId() != null) parentCount++;
+        if (request.getVenueId() != null)
+            parentCount++;
+        if (request.getBuildingId() != null)
+            parentCount++;
+        if (request.getHallId() != null)
+            parentCount++;
 
         if (parentCount != 1) {
-            throw new BusinessException("Exactly one parent (venue, building, or hall) must be specified.", ErrorCode.BUSINESS_RULE_VIOLATION);
+            throw new BusinessException("Exactly one parent (venue, building, or hall) must be specified.",
+                    ErrorCode.BUSINESS_RULE_VIOLATION);
         }
 
         LayoutMarker marker = new LayoutMarker();
@@ -56,8 +62,7 @@ public class LayoutMarkerService {
                 request.getLayout().getXCoord(),
                 request.getLayout().getYCoord(),
                 request.getLayout().getWidth(),
-                request.getLayout().getHeight()
-        );
+                request.getLayout().getHeight());
         marker.setLayout(layout);
 
         if (request.getVenueId() != null) {
@@ -96,8 +101,7 @@ public class LayoutMarkerService {
                 request.getLayout().getXCoord(),
                 request.getLayout().getYCoord(),
                 request.getLayout().getWidth(),
-                request.getLayout().getHeight()
-        );
+                request.getLayout().getHeight());
         marker.setLayout(layout);
 
         LayoutMarker saved = layoutMarkerRepository.save(marker);

@@ -2,9 +2,7 @@ package com.bookfair.backend.service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -64,7 +62,7 @@ public class ReservationCleanupService {
 
         for (Reservation reservation : expiredReservations) {
 
-            eventPublisher.publishEvent(new ReservationExpiredEvent(reservation.getUser().getId(), reservation.getEvent().getName()));
+            eventPublisher.publishEvent(new ReservationExpiredEvent(reservation.getUser().getId(), reservation.getUser().getUsername(), reservation.getUser().getEmail(), reservation.getId(), reservation.getEvent().getName()));
         }
 
     }

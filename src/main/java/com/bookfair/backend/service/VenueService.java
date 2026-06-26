@@ -23,130 +23,137 @@ import com.bookfair.backend.model.Venue;
 import com.bookfair.backend.repository.OrganizationRepository;
 import com.bookfair.backend.repository.VenueRepository;
 
+import static java.util.Objects.requireNonNull;
+
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class VenueService {
-    private final VenueRepository venueRepository;
-    private final OrganizationRepository organizationRepository;
-    private final VenueMapper venueMapper;
-    private final BuildingMapper buildingMapper;
+        private final VenueRepository venueRepository;
+        private final OrganizationRepository organizationRepository;
+        private final VenueMapper venueMapper;
+        private final BuildingMapper buildingMapper;
 
-    @Transactional
-    public VenueResponse createVenue(CreateVenueRequest request) {
-        if (venueRepository.existsByNameAndActiveTrue(request.getName())) {
-            throw new DuplicateResourceException(
-                    "A venue with this name already exists.",
-                    ErrorCode.BUSINESS_RULE_VIOLATION);
+        @Transactional
+        public VenueResponse createVenue(CreateVenueRequest request) {
+                requireNonNull(request, "request cannot be null");
+                if (venueRepository.existsByNameAndActiveTrue(request.getName())) {
+                        throw new DuplicateResourceException(
+                                        "A venue with this name already exists.",
+                                        ErrorCode.BUSINESS_RULE_VIOLATION);
+                }
+
+                Organization owner = organizationRepository.findById(request.getOwnerOrganizationId())
+                                .orElseThrow(
+                                                () -> new ResourceNotFoundException("Owner org not found",
+                                                                ErrorCode.ORGANIZATION_NOT_FOUND));
+
+                List<Organization> partners = (request.getPartnerOrganizationIds() != null
+                                && !request.getPartnerOrganizationIds().isEmpty())
+                                                ? organizationRepository
+                                                                .findAllById(request.getPartnerOrganizationIds())
+                                                : List.of();
+
+                Venue venue = venueMapper.toVenueFromCreateVenueRequest(request);
+                venue.setActive(true);
+                venue.setOwner(owner);
+                venue.setPartners(partners);
+
+                return venueMapper.toVenueResponse(venueRepository.save(venue));
         }
 
-        Organization owner = organizationRepository.findById(request.getOwnerOrganizationId())
-                .orElseThrow(
-                        () -> new ResourceNotFoundException("Owner org not found", ErrorCode.ORGANIZATION_NOT_FOUND));
-
-        List<Organization> partners = (request.getPartnerOrganizationIds() != null
-                && !request.getPartnerOrganizationIds().isEmpty())
-                        ? organizationRepository.findAllById(request.getPartnerOrganizationIds())
-                        : List.of();
-
-        Venue venue = venueMapper.toVenueFromCreateVenueRequest(request);
-        venue.setActive(true);
-        venue.setOwner(owner);
-        venue.setPartners(partners);
-
-        return venueMapper.toVenueResponse(venueRepository.save(venue));
-    }
-
-    @Transactional(readOnly = true)
-    public Page<VenueResponse> getAllVenues(Pageable pageable) {
-        return venueRepository.findAll(pageable)
-                .map(venueMapper::toVenueResponse);
-    }
-
-    @Transactional(readOnly = true)
-    public List<VenueResponse> getAllVenues() {
-        return venueRepository.findAll().stream()
-                .filter(v -> Boolean.TRUE.equals(v.getActive()))
-                .map(venueMapper::toVenueResponse)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public VenueResponse getVenue(UUID id) {
-        Venue venue = venueRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Venue not found with ID: " + id,
-                        ErrorCode.VENUE_NOT_FOUND));
-        return venueMapper.toVenueResponse(venue);
-    }
-
-    @Transactional(readOnly = true)
-    public VenueMapResponse getVenueMap(UUID id) {
-        Venue venue = venueRepository.findDetailedById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Venue not found with ID: " + id,
-                        ErrorCode.VENUE_NOT_FOUND));
-        return venueMapper.toVenueMapResponse(venue);
-    }
-
-    @Transactional
-    public VenueResponse updateVenue(UUID id, UpdateVenueRequest request) {
-        Venue venue = venueRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Venue not found with ID: " + id,
-                        ErrorCode.VENUE_NOT_FOUND));
-
-        if (!venue.getName().equals(request.getName()) &&
-                venueRepository.existsByNameAndActiveTrue(request.getName())) {
-            throw new DuplicateResourceException(
-                    "A venue with this name already exists.",
-                    ErrorCode.BUSINESS_RULE_VIOLATION);
+        @Transactional(readOnly = true)
+        public Page<VenueResponse> getAllVenues(Pageable pageable) {
+                return venueRepository.findAll(pageable)
+                                .map(venueMapper::toVenueResponse);
         }
 
-        Organization owner = organizationRepository.findById(request.getOwnerOrganizationId())
-                .orElseThrow(
-                        () -> new ResourceNotFoundException("Owner org not found", ErrorCode.ORGANIZATION_NOT_FOUND));
+        @Transactional(readOnly = true)
+        public List<VenueResponse> getAllVenues() {
+                return venueRepository.findAll().stream()
+                                .filter(v -> Boolean.TRUE.equals(v.getActive()))
+                                .map(venueMapper::toVenueResponse)
+                                .toList();
+        }
 
-        List<Organization> partners = (request.getPartnerOrganizationIds() != null
-                && !request.getPartnerOrganizationIds().isEmpty())
-                        ? organizationRepository.findAllById(request.getPartnerOrganizationIds())
-                        : List.of();
+        @Transactional(readOnly = true)
+        public VenueResponse getVenue(UUID id) {
+                Venue venue = venueRepository.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Venue not found with ID: " + id,
+                                                ErrorCode.VENUE_NOT_FOUND));
+                return venueMapper.toVenueResponse(venue);
+        }
 
-        venue = venueMapper.updateVenueFromUpdateVenueRequest(request, venue);
-        venue.setOwner(owner);
-        venue.setPartners(partners);
+        @Transactional(readOnly = true)
+        public VenueMapResponse getVenueMap(UUID id) {
+                Venue venue = venueRepository.findDetailedById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Venue not found with ID: " + id,
+                                                ErrorCode.VENUE_NOT_FOUND));
+                return venueMapper.toVenueMapResponse(venue);
+        }
 
-        return venueMapper.toVenueResponse(venueRepository.save(venue));
-    }
+        @Transactional
+        public VenueResponse updateVenue(UUID id, UpdateVenueRequest request) {
+                Venue venue = venueRepository.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Venue not found with ID: " + id,
+                                                ErrorCode.VENUE_NOT_FOUND));
 
-    @Transactional
-    public void deleteVenue(UUID id) {
-        Venue venue = venueRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Venue not found with ID: " + id,
-                        ErrorCode.VENUE_NOT_FOUND));
-        venue.setActive(false);
-        venueRepository.save(venue);
-    }
+                if (!venue.getName().equals(request.getName()) &&
+                                venueRepository.existsByNameAndActiveTrue(request.getName())) {
+                        throw new DuplicateResourceException(
+                                        "A venue with this name already exists.",
+                                        ErrorCode.BUSINESS_RULE_VIOLATION);
+                }
 
-    @Transactional(readOnly = true)
-    public List<BuildingResponse> getBuildingsByVenue(UUID venueId) {
-        Venue venue = venueRepository.findById(venueId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Venue not found with ID: " + venueId,
-                        ErrorCode.VENUE_NOT_FOUND));
-        return venue.getBuildings().stream()
-                .map(buildingMapper::toBuildingResponse)
-                .toList();
-    }
+                Organization owner = organizationRepository.findById(request.getOwnerOrganizationId())
+                                .orElseThrow(
+                                                () -> new ResourceNotFoundException("Owner org not found",
+                                                                ErrorCode.ORGANIZATION_NOT_FOUND));
 
-    @Transactional(readOnly = true)
-    public Object getMarkersByVenue(UUID venueId) {
-        Venue venue = venueRepository.findById(venueId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Venue not found with ID: " + venueId,
-                        ErrorCode.VENUE_NOT_FOUND));
-        return venue.getMarkers();
-    }
+                List<Organization> partners = (request.getPartnerOrganizationIds() != null
+                                && !request.getPartnerOrganizationIds().isEmpty())
+                                                ? organizationRepository
+                                                                .findAllById(request.getPartnerOrganizationIds())
+                                                : List.of();
+
+                venue = venueMapper.updateVenueFromUpdateVenueRequest(request, venue);
+                venue.setOwner(owner);
+                venue.setPartners(partners);
+
+                return venueMapper.toVenueResponse(venueRepository.save(venue));
+        }
+
+        @Transactional
+        public void deleteVenue(UUID id) {
+                Venue venue = venueRepository.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Venue not found with ID: " + id,
+                                                ErrorCode.VENUE_NOT_FOUND));
+                venue.setActive(false);
+                venueRepository.save(venue);
+        }
+
+        @Transactional(readOnly = true)
+        public List<BuildingResponse> getBuildingsByVenue(UUID venueId) {
+                Venue venue = venueRepository.findById(venueId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Venue not found with ID: " + venueId,
+                                                ErrorCode.VENUE_NOT_FOUND));
+                return venue.getBuildings().stream()
+                                .map(buildingMapper::toBuildingResponse)
+                                .toList();
+        }
+
+        @Transactional(readOnly = true)
+        public Object getMarkersByVenue(UUID venueId) {
+                Venue venue = venueRepository.findById(venueId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Venue not found with ID: " + venueId,
+                                                ErrorCode.VENUE_NOT_FOUND));
+                return venue.getMarkers();
+        }
 }
