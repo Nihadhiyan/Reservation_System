@@ -4,7 +4,6 @@ import java.time.Duration;
 
 import org.springframework.lang.Nullable;
 import org.springframework.lang.NonNull;
-import org.springframework.boot.autoconfigure.cache.RedisCacheManagerBuilderCustomizer;
 import org.springframework.cache.Cache;
 import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.annotation.EnableCaching;
@@ -30,16 +29,6 @@ public class CacheConfig implements CachingConfigurer {
                 .disableCachingNullValues()
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
                         .fromSerializer(RedisSerializer.json()));
-    }
-
-    @Bean
-    public RedisCacheManagerBuilderCustomizer cacheCustomizer() {
-        return builder -> builder.withCacheConfiguration(
-                "userDetails",
-                cacheConfiguration().entryTtl(Duration.ofMinutes(10)))
-                .withCacheConfiguration(
-                        "userDetailsById",
-                        cacheConfiguration().entryTtl(Duration.ofMinutes(10)));
     }
 
     @Override
