@@ -58,7 +58,7 @@ public class UserService {
 
         @Transactional(readOnly = true)
         public UserResponse getMyProfile(String username) {
-                User user = userRepository.findByUsernameAndActiveTrue(username)
+                User user = userRepository.findByUsernameAndActiveTrue(requireNonNull(username))
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                                 "User not found",
                                                 ErrorCode.USER_NOT_FOUND));
@@ -68,21 +68,21 @@ public class UserService {
 
         @Transactional
         public UserResponse updateUser(String username, UpdateUserRequest userUpdateRequest) {
-                User user = userRepository.findByUsernameAndActiveTrue(username)
+                User user = userRepository.findByUsernameAndActiveTrue(requireNonNull(username))
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                                 "User not found with username: " + username,
                                                 ErrorCode.USER_NOT_FOUND));
 
                 if (userUpdateRequest.getUsername() != null &&
                                 !userUpdateRequest.getUsername().equals(user.getUsername()) &&
-                                userRepository.existsByUsernameAndActiveTrue(userUpdateRequest.getUsername())) {
+                                userRepository.existsByUsernameAndActiveTrue(requireNonNull(userUpdateRequest.getUsername()))) {
                         throw new DuplicateResourceException("Username is already taken.",
                                         ErrorCode.DUPLICATE_USERNAME);
                 }
 
                 if (userUpdateRequest.getEmail() != null &&
                                 !userUpdateRequest.getEmail().equals(user.getEmail()) &&
-                                userRepository.existsByEmailAndActiveTrue(userUpdateRequest.getEmail())) {
+                                userRepository.existsByEmailAndActiveTrue(requireNonNull(userUpdateRequest.getEmail()))) {
 
                         throw new DuplicateResourceException("That email is already in use by another account.",
                                         ErrorCode.DUPLICATE_EMAIL);
@@ -100,7 +100,7 @@ public class UserService {
         @Transactional
         public void deleteUserAsAdmin(UUID userId) {
 
-                User targetUser = userRepository.findByIdAndActiveTrue(userId)
+                User targetUser = userRepository.findByIdAndActiveTrue(requireNonNull(userId))
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                                 "User not found with ID: " + userId,
                                                 ErrorCode.USER_NOT_FOUND));
@@ -128,7 +128,7 @@ public class UserService {
 
         @Transactional
         public void deleteMyAccount(String username) {
-                User user = userRepository.findByUsernameAndActiveTrue(username)
+                User user = userRepository.findByUsernameAndActiveTrue(requireNonNull(username))
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                                 "User not found with username: " + username,
                                                 ErrorCode.USER_NOT_FOUND));
@@ -145,7 +145,7 @@ public class UserService {
 
         @Transactional(readOnly = true)
         public List<ReservationResponse> getUserReservations(UUID userId) {
-                User user = userRepository.findByIdAndActiveTrue(userId)
+                User user = userRepository.findByIdAndActiveTrue(requireNonNull(userId))
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                                 "User not found with ID: " + userId,
                                                 ErrorCode.USER_NOT_FOUND));
@@ -157,7 +157,7 @@ public class UserService {
 
         @Transactional(readOnly = true)
         public List<ReservationResponse> getMyReservations(String username) {
-                User user = userRepository.findByUsernameAndActiveTrue(username)
+                User user = userRepository.findByUsernameAndActiveTrue(requireNonNull(username))
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                                 "User not found with username: " + username,
                                                 ErrorCode.USER_NOT_FOUND));
@@ -169,13 +169,13 @@ public class UserService {
 
         @Transactional(readOnly = true)
         public Page<UserResponse> getAllUsers(Pageable pageable) {
-                return userRepository.findAllByActiveTrue(pageable)
+                return userRepository.findAllByActiveTrue(requireNonNull(pageable))
                                 .map(userMapper::toUserResponse);
         }
 
         @Transactional
         public void setRole(UUID id, UpdateUserRoleRequest updateUserRoleRequest) {
-                User targetUser = userRepository.findByIdAndActiveTrue(id)
+                User targetUser = userRepository.findByIdAndActiveTrue(requireNonNull(id))
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                                 "User not found with ID: " + id,
                                                 ErrorCode.USER_NOT_FOUND));
@@ -208,11 +208,11 @@ public class UserService {
                 SystemRole newRole = savedUser.getSystemRole();
 
                 eventPublisher.publishEvent(new UserRoleUpdatedEvent(
-                                savedUser.getId(),
-                                savedUser.getUsername(),
-                                savedUser.getEmail(),
-                                newRole.name(),
-                                oldRole.name()));
+                                requireNonNull(savedUser.getId()),
+                                requireNonNull(savedUser.getUsername()),
+                                requireNonNull(savedUser.getEmail()),
+                                requireNonNull(newRole.name()),
+                                requireNonNull(oldRole.name())));
         }
 
         private UUID getCurrentUserId() {
@@ -232,7 +232,7 @@ public class UserService {
         private User getCurrentUser() {
                 UUID currentUserId = getCurrentUserId();
 
-                return userRepository.findById(currentUserId)
+                return userRepository.findById(requireNonNull(currentUserId))
                                 .orElseThrow(
                                                 () -> new ResourceNotFoundException(
                                                                 "Current user not found",
@@ -244,18 +244,18 @@ public class UserService {
                 user.setDeletionAudit(
                                 new DeletionAudit(
                                                 Instant.now(),
-                                                getCurrentUserId()));
+                                                requireNonNull(getCurrentUserId())));
                 userRepository.save(user);
-                eventPublisher.publishEvent(new UserDeletedEvent(user.getId(),
-                                user.getUsername(), user.getEmail()));
+                eventPublisher.publishEvent(new UserDeletedEvent(requireNonNull(user.getId()),
+                                requireNonNull(user.getUsername()), requireNonNull(user.getEmail())));
         }
 
         private void publishUserUpdatedEvent(User user) {
                 eventPublisher.publishEvent(
                                 new UserUpdatedEvent(
-                                                user.getId(),
-                                                user.getUsername(),
-                                                user.getEmail()));
+                                                requireNonNull(user.getId()),
+                                                requireNonNull(user.getUsername()),
+                                                requireNonNull(user.getEmail())));
         }
 
 }

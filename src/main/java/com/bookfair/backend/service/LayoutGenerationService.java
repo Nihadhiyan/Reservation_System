@@ -32,7 +32,7 @@ public class LayoutGenerationService {
     public List<Stall> autoGenerateStallGrid(UUID hallId, int rows, int columns, int stallWidth, int stallLength,
             int aisleWidth, int startX, int startY) {
         requireNonNull(hallId, "hallId cannot be null");
-        Hall hall = hallRepository.findById(hallId)
+        Hall hall = hallRepository.findById(requireNonNull(hallId))
                 .orElseThrow(() -> new ResourceNotFoundException("Hall not found", ErrorCode.HALL_NOT_FOUND));
 
         List<Stall> newStalls = new ArrayList<>();
@@ -62,12 +62,13 @@ public class LayoutGenerationService {
         }
 
         log.info("Auto-generated {} stalls for Hall {}", newStalls.size(), hallId);
-        return stallRepository.saveAll(newStalls);
+        return stallRepository.saveAll(requireNonNull(newStalls));
     }
 
     @Transactional
     public Stall updateStallCoordinates(UUID stallId, LayoutPositionDto layoutPositionDto) {
-        Stall stall = stallRepository.findById(stallId)
+        requireNonNull(layoutPositionDto, "layoutPositionDto cannot be null");
+        Stall stall = stallRepository.findById(requireNonNull(stallId))
                 .orElseThrow(() -> new ResourceNotFoundException("Stall not found", ErrorCode.STALL_NOT_FOUND));
 
         LayoutPosition newLayout = new LayoutPosition(
@@ -83,7 +84,7 @@ public class LayoutGenerationService {
 
     @Transactional(readOnly = true)
     public List<Stall> getHallLayout(UUID hallId) {
-        if (!hallRepository.existsById(hallId)) {
+        if (!hallRepository.existsById(requireNonNull(hallId))) {
             throw new ResourceNotFoundException("Hall not found", ErrorCode.HALL_NOT_FOUND);
         }
         return stallRepository.findByHallIdAndActiveTrue(hallId);

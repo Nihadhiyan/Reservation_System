@@ -1,5 +1,6 @@
 package com.bookfair.backend.config;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,19 +23,17 @@ public class AuditConfig {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
             if (authentication == null || !authentication.isAuthenticated()
-                    || authentication.getPrincipal().equals("anonymousUser")) {
-                if (SYSTEM_USER_ID != null) {
-                    return Optional.of(SYSTEM_USER_ID);
-                }
+                    || "anonymousUser".equals(authentication.getPrincipal())) {
+                return Objects.requireNonNull(Optional.of(SYSTEM_USER_ID));
             }
 
             Object principal = authentication.getPrincipal();
 
             if (principal instanceof UUID userId) {
-                return Optional.of(userId);
+                return Objects.requireNonNull(Optional.of(userId));
             }
 
-            return Optional.of(SYSTEM_USER_ID);
+            return Objects.requireNonNull(Optional.of(SYSTEM_USER_ID));
         };
     }
 }

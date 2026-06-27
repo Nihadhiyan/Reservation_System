@@ -37,7 +37,7 @@ public class FloorService {
     @Transactional
     public FloorResponse createFloor(CreateFloorRequest request) {
         requireNonNull(request, "request cannot be null");
-        Building building = buildingRepository.findById(request.getBuildingId())
+        Building building = buildingRepository.findById(requireNonNull(request.getBuildingId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Building not found", ErrorCode.VENUE_NOT_FOUND));
 
         Floor floor = new Floor();
@@ -51,7 +51,7 @@ public class FloorService {
 
     @Transactional(readOnly = true)
     public FloorResponse getFloorById(UUID id) {
-        Floor floor = floorRepository.findById(id)
+        Floor floor = floorRepository.findById(requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Floor not found", ErrorCode.VENUE_NOT_FOUND));
 
         return floorMapper.toFloorResponse(floor);
@@ -59,10 +59,11 @@ public class FloorService {
 
     @Transactional
     public FloorResponse updateFloor(UUID id, UpdateFloorRequest request) {
-        Floor floor = floorRepository.findById(id)
+        requireNonNull(request, "request cannot be null");
+        Floor floor = floorRepository.findById(requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Floor not found", ErrorCode.VENUE_NOT_FOUND));
 
-        Building building = buildingRepository.findById(request.getBuildingId())
+        Building building = buildingRepository.findById(requireNonNull(request.getBuildingId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Building not found", ErrorCode.VENUE_NOT_FOUND));
 
         floorMapper.UpdateFloorFromFloorRequest(request, floor);
@@ -74,15 +75,15 @@ public class FloorService {
 
     @Transactional
     public void deleteFloor(UUID id) {
-        Floor floor = floorRepository.findById(id)
+        Floor floor = floorRepository.findById(requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Floor not found", ErrorCode.VENUE_NOT_FOUND));
 
-        floorRepository.delete(floor);
+        floorRepository.delete(requireNonNull(floor));
     }
 
     @Transactional(readOnly = true)
     public List<HallResponse> getHallsByFloor(UUID floorId) {
-        if (!floorRepository.existsById(floorId)) {
+        if (!floorRepository.existsById(requireNonNull(floorId))) {
             throw new ResourceNotFoundException("Floor not found", ErrorCode.VENUE_NOT_FOUND);
         }
 

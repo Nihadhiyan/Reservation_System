@@ -26,7 +26,7 @@ public class TokenBlacklistService {
         long currentEpochSeconds = Instant.now().getEpochSecond();
 
         try {
-            redisTemplate.opsForValue().set(redisKey, String.valueOf(currentEpochSeconds), 2, TimeUnit.HOURS);
+            Objects.requireNonNull(redisTemplate.opsForValue()).set(redisKey, String.valueOf(currentEpochSeconds), 2, TimeUnit.HOURS);
             log.info("Security checkpoint activated for user [{}]. All JWTs issued before epoch {} are invalidated.",
                     userId, currentEpochSeconds);
         } catch (Exception e) {
@@ -43,7 +43,7 @@ public class TokenBlacklistService {
         String redisKey = CHECKPOINT_KEY_PREFIX + userId;
 
         try {
-            String valueStr = redisTemplate.opsForValue().get(redisKey);
+            String valueStr = Objects.requireNonNull(redisTemplate.opsForValue()).get(redisKey);
             if (valueStr == null || valueStr.isBlank()) {
                 return null;
             }
@@ -65,7 +65,7 @@ public class TokenBlacklistService {
             return;
 
         try {
-            redisTemplate.opsForValue().set(
+            Objects.requireNonNull(redisTemplate.opsForValue()).set(
                     "blacklisted_jti:" + jti,
                     "revoked",
                     remainingLifespanSeconds,
@@ -81,7 +81,7 @@ public class TokenBlacklistService {
         if (jti == null || jti.isBlank())
             return false;
         try {
-            return Boolean.TRUE.equals(redisTemplate.hasKey("blacklisted_jti:" + jti));
+            return Boolean.TRUE.equals(redisTemplate.hasKey(Objects.requireNonNull("blacklisted_jti:" + jti)));
         } catch (Exception e) {
             log.warn("Redis JTI blacklist check failed, failing open: {}", e.getMessage());
             return false;

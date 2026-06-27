@@ -1,7 +1,7 @@
 package com.bookfair.backend.config.filter;
 
 import java.io.IOException;
-import java.util.Date;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -54,7 +54,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String jti = null;
         UUID userId = null;
         String roles = null;
-        Date issuedAt = null;
+        Instant issuedAt = null;
 
         try {
             jti = jwtService.extractJti(token);
@@ -84,7 +84,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Long checkpointEpochSeconds = tokenBlacklistService.getSecurityCheckpoint(userId);
 
             if (checkpointEpochSeconds != null) {
-                long tokenIssuedEpochSeconds = issuedAt.getTime() / 1000L;
+                long tokenIssuedEpochSeconds = issuedAt.getEpochSecond();
 
                 if (tokenIssuedEpochSeconds < checkpointEpochSeconds) {
                     log.warn(

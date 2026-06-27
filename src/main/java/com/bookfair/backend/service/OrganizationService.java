@@ -57,7 +57,7 @@ public class OrganizationService {
 
     @Transactional(readOnly = true)
     public OrganizationResponse getOrganizationById(UUID id) {
-        Organization organization = organizationRepository.findByIdAndActiveTrue(id)
+        Organization organization = organizationRepository.findByIdAndActiveTrue(requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found",
                         ErrorCode.ORGANIZATION_NOT_FOUND));
 
@@ -66,7 +66,8 @@ public class OrganizationService {
 
     @Transactional
     public OrganizationResponse createOrganization(CreateOrganizationRequest request) {
-        if (organizationRepository.existsByNameAndActiveTrue(request.getName())) {
+        requireNonNull(request, "request cannot be null");
+        if (organizationRepository.existsByNameAndActiveTrue(requireNonNull(request.getName()))) {
             throw new DuplicateResourceException("An organization with this name already exists.",
                     ErrorCode.DUPLICATE_ORGANIZATION_NAME);
         }
@@ -79,7 +80,8 @@ public class OrganizationService {
 
     @Transactional
     public OrganizationResponse updateOrganization(UUID id, UpdateOrganizationRequest request) {
-        Organization organization = organizationRepository.findByIdAndActiveTrue(id)
+        requireNonNull(request, "request cannot be null");
+        Organization organization = organizationRepository.findByIdAndActiveTrue(requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found",
                         ErrorCode.ORGANIZATION_NOT_FOUND));
 
@@ -97,7 +99,7 @@ public class OrganizationService {
 
         // rename conflict check (exclude self)
         if (!organization.getName().equalsIgnoreCase(request.getName()) &&
-                organizationRepository.existsByNameAndActiveTrue(request.getName())) {
+                organizationRepository.existsByNameAndActiveTrue(requireNonNull(request.getName()))) {
             throw new DuplicateResourceException("An organization with this name already exists.",
                     ErrorCode.DUPLICATE_ORGANIZATION_NAME);
         }
@@ -110,8 +112,8 @@ public class OrganizationService {
         if (!oldCapabilities.equals(organization.getCapabilities())) {
             applicationEventPublisher.publishEvent(
                     new OrganizationCapabilityChangedEvent(
-                            organization.getId(),
-                            organization.getCapabilities()));
+                            requireNonNull(organization.getId()),
+                            requireNonNull(organization.getCapabilities())));
         }
 
         return organizationMapper.toOrganizationResponse(updatedOrganization);
@@ -119,7 +121,7 @@ public class OrganizationService {
 
     @Transactional
     public void deactivateOrganization(UUID id) {
-        Organization organization = organizationRepository.findByIdAndActiveTrue(id)
+        Organization organization = organizationRepository.findByIdAndActiveTrue(requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found",
                         ErrorCode.ORGANIZATION_NOT_FOUND));
 
@@ -155,18 +157,18 @@ public class OrganizationService {
     }
 
     private User getCurrentUser() {
-        return userRepository.findById(getCurrentUserId())
+        return userRepository.findById(requireNonNull(getCurrentUserId()))
                 .orElseThrow(() -> new ResourceNotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
     }
 
     private void softDelete(Organization organization) {
         organization.setActive(false);
-        organization.setDeletionAudit(new DeletionAudit(Instant.now(), getCurrentUserId()));
+        organization.setDeletionAudit(new DeletionAudit(Instant.now(), requireNonNull(getCurrentUserId())));
         organizationRepository.save(organization);
     }
 
     private void publishOrganizationDeactivatedEvent(UUID organizationId) {
         applicationEventPublisher.publishEvent(
-                new OrganizationDeactivatedEvent(organizationId, getCurrentUserId()));
+                new OrganizationDeactivatedEvent(requireNonNull(organizationId), requireNonNull(getCurrentUserId())));
     }
 }

@@ -28,6 +28,7 @@ public class EmailService {
     public void sendEmail(String to, String subject, String templateName, Map<String, Object> variables,
             String qrBase64) {
         requireNonNull(to, "to cannot be null");
+        requireNonNull(subject, "subject cannot be null");
         requireNonNull(templateName, "templateName cannot be null");
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -42,12 +43,12 @@ public class EmailService {
             Context thymeleafContext = new Context();
             thymeleafContext.setVariables(variables);
 
-            String htmlBody = templateEngine.process("email/" + templateName, thymeleafContext);
+            String htmlBody = requireNonNull(templateEngine.process("email/" + templateName, thymeleafContext));
 
             helper.setText(htmlBody, true);
 
             if (hasQrCode) {
-                byte[] decodedImg = Base64.getDecoder().decode(qrBase64);
+                byte[] decodedImg = requireNonNull(Base64.getDecoder().decode(qrBase64));
                 helper.addInline("qrCode", new ByteArrayResource(decodedImg), "image/png");
             }
 

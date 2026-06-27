@@ -64,7 +64,7 @@ public class EventStallService {
 
     @Transactional(readOnly = true)
     public EventStallResponse getEventStallById(UUID id) {
-        EventStall eventStall = eventStallRepository.findById(id)
+        EventStall eventStall = eventStallRepository.findById(requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Event stall not found", ErrorCode.EVENT_NOT_FOUND));
 
         return eventMapper.toEventStallResponse(eventStall);
@@ -72,7 +72,8 @@ public class EventStallService {
 
     @Transactional
     public EventStallResponse updateEventStall(UUID id, CreateEventStallRequest request) {
-        EventStall eventStall = eventStallRepository.findById(id)
+        requireNonNull(request, "request cannot be null");
+        EventStall eventStall = eventStallRepository.findById(requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Event stall not found", ErrorCode.EVENT_NOT_FOUND));
 
         eventStall.setBasePrice(request.getBasePrice());
@@ -85,7 +86,7 @@ public class EventStallService {
 
     @Transactional
     public void removeStallFromEvent(UUID id) {
-        EventStall eventStall = eventStallRepository.findById(id)
+        EventStall eventStall = eventStallRepository.findById(requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Event stall not found", ErrorCode.EVENT_NOT_FOUND));
 
         if (eventStall.getStatus() == EventStall.AvailabilityStatus.BOOKED) {
@@ -98,7 +99,7 @@ public class EventStallService {
 
     @Transactional(readOnly = true)
     public List<EventStallResponse> getStallsForEvent(UUID eventId) {
-        if (!eventRepository.findByIdAndActiveTrue(eventId).isPresent()) {
+        if (!eventRepository.findByIdAndActiveTrue(requireNonNull(eventId)).isPresent()) {
             throw new ResourceNotFoundException("Event not found", ErrorCode.EVENT_NOT_FOUND);
         }
 
@@ -110,10 +111,10 @@ public class EventStallService {
 
     @Transactional
     public List<EventStallResponse> copyAllStallsFromHall(UUID eventId, UUID hallId) {
-        Event event = eventRepository.findByIdAndActiveTrue(eventId)
+        Event event = eventRepository.findByIdAndActiveTrue(requireNonNull(eventId))
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found", ErrorCode.EVENT_NOT_FOUND));
 
-        List<Stall> stalls = stallRepository.findByHallIdAndActiveTrue(hallId);
+        List<Stall> stalls = stallRepository.findByHallIdAndActiveTrue(requireNonNull(hallId));
 
         List<EventStall> newEventStalls = stalls.stream().map(stall -> {
             EventStall eventStall = new EventStall();
@@ -128,7 +129,7 @@ public class EventStallService {
             return eventStall;
         }).collect(Collectors.toList());
 
-        List<EventStall> savedStalls = eventStallRepository.saveAll(newEventStalls);
+        List<EventStall> savedStalls = eventStallRepository.saveAll(requireNonNull(newEventStalls));
         return savedStalls.stream().map(eventMapper::toEventStallResponse).collect(Collectors.toList());
     }
 }

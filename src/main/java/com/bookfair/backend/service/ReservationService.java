@@ -67,11 +67,11 @@ public class ReservationService {
 
         @Transactional(readOnly = true)
         public List<ReservationResponse> getMyReservations(String username) {
-                User user = userRepository.findByUsernameAndActiveTrue(username)
+                User user = userRepository.findByUsernameAndActiveTrue(requireNonNull(username))
                                 .orElseThrow(() -> new ResourceNotFoundException("User not found",
                                                 ErrorCode.USER_NOT_FOUND));
 
-                return reservationRepository.findByUserId(user.getId()).stream()
+                return reservationRepository.findByUserId(requireNonNull(user.getId())).stream()
                                 .map(reservationMapper::toReservationResponse)
                                 .toList();
         }
@@ -79,29 +79,29 @@ public class ReservationService {
         @Transactional
         public ReservationResponse createReservation(CreateReservationRequest request) {
                 requireNonNull(request, "request cannot be null");
-                User user = userRepository.findByIdAndActiveTrue(getCurrentUserId())
+                User user = userRepository.findByIdAndActiveTrue(requireNonNull(getCurrentUserId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("User not found",
                                                 ErrorCode.USER_NOT_FOUND));
 
-                Event event = eventRepository.findByIdAndActiveTrue(request.getEventId())
+                Event event = eventRepository.findByIdAndActiveTrue(requireNonNull(request.getEventId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("Event not found",
                                                 ErrorCode.EVENT_NOT_FOUND));
 
-                Genre genre = genreRepository.findByIdAndActiveTrue(request.getGenreId())
+                Genre genre = genreRepository.findByIdAndActiveTrue(requireNonNull(request.getGenreId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("Genre not found",
                                                 ErrorCode.GENRE_NOT_FOUND));
 
-                Organization organization = organizationRepository.findById(request.getOrganizationId())
+                Organization organization = organizationRepository.findById(requireNonNull(request.getOrganizationId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found",
                                                 ErrorCode.ORGANIZATION_NOT_FOUND));
 
-                if (!memberRepository.existsByUserIdAndOrganizationId(user.getId(), organization.getId())) {
+                if (!memberRepository.existsByUserIdAndOrganizationId(requireNonNull(user.getId()), requireNonNull(organization.getId()))) {
                         throw new BusinessException(
                                         "User must belong to the organization to make a reservation on its behalf.",
                                         ErrorCode.BUSINESS_RULE_VIOLATION);
                 }
 
-                List<EventStall> stalls = eventStallRepository.findAllForUpdate(request.getStallIds());
+                List<EventStall> stalls = eventStallRepository.findAllForUpdate(requireNonNull(request.getStallIds()));
 
                 if (stalls.size() != request.getStallIds().size()) {
                         throw new BusinessException("One or more requested stalls could not be found.",
@@ -162,8 +162,8 @@ public class ReservationService {
                 eventStallRepository.saveAll(stalls);
                 Reservation savedReservation = reservationRepository.save(reservation);
 
-                eventPublisher.publishEvent(new ReservationRequestReceivedEvent(user.getId(), user.getUsername(),
-                                user.getEmail(), savedReservation.getId(), event.getName()));
+                eventPublisher.publishEvent(new ReservationRequestReceivedEvent(requireNonNull(user.getId()), requireNonNull(user.getUsername()),
+                                requireNonNull(user.getEmail()), requireNonNull(savedReservation.getId()), requireNonNull(event.getName())));
 
                 return reservationMapper.toReservationResponse(savedReservation);
         }
@@ -171,12 +171,12 @@ public class ReservationService {
         @Transactional
         public void confirmReservation(UUID reservationId) {
                 Reservation reservation = reservationRepository
-                                .findByIdAndStatus(reservationId, ReservationStatus.PENDING)
+                                .findByIdAndStatus(requireNonNull(reservationId), ReservationStatus.PENDING)
                                 .orElseThrow(
                                                 () -> new ResourceNotFoundException("Reservation not found",
                                                                 ErrorCode.RESERVATION_NOT_FOUND));
 
-                User requestingUser = userRepository.findById(getCurrentUserId())
+                User requestingUser = userRepository.findById(requireNonNull(getCurrentUserId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("User not found",
                                                 ErrorCode.USER_NOT_FOUND));
 
@@ -204,20 +204,20 @@ public class ReservationService {
 
                 reservationRepository.save(reservation);
 
-                eventPublisher.publishEvent(new ReservationConfirmedEvent(reservation.getUser().getId(),
-                                reservation.getUser().getUsername(), reservation.getUser().getEmail(),
-                                reservation.getId(),
-                                reservation.getEvent().getName(), qrCodeImage));
+                eventPublisher.publishEvent(new ReservationConfirmedEvent(requireNonNull(reservation.getUser().getId()),
+                                requireNonNull(reservation.getUser().getUsername()), requireNonNull(reservation.getUser().getEmail()),
+                                requireNonNull(reservation.getId()),
+                                requireNonNull(reservation.getEvent().getName()), requireNonNull(qrCodeImage)));
         }
 
         @Transactional
         public void requestCancellation(UUID reservationId) {
-                Reservation reservation = reservationRepository.findById(reservationId)
+                Reservation reservation = reservationRepository.findById(requireNonNull(reservationId))
                                 .orElseThrow(
                                                 () -> new ResourceNotFoundException("Reservation not found",
                                                                 ErrorCode.RESERVATION_NOT_FOUND));
 
-                User requestingUser = userRepository.findById(getCurrentUserId())
+                User requestingUser = userRepository.findById(requireNonNull(getCurrentUserId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("User not found",
                                                 ErrorCode.USER_NOT_FOUND));
 
@@ -236,21 +236,21 @@ public class ReservationService {
                 reservationRepository.save(reservation);
 
                 eventPublisher.publishEvent(
-                                new ReservationRefundPendingEvent(reservation.getUser().getId(),
-                                                reservation.getUser().getUsername(),
-                                                reservation.getUser().getEmail(), reservation.getId(),
-                                                reservation.getEvent().getName()));
+                                new ReservationRefundPendingEvent(requireNonNull(reservation.getUser().getId()),
+                                                requireNonNull(reservation.getUser().getUsername()),
+                                                requireNonNull(reservation.getUser().getEmail()), requireNonNull(reservation.getId()),
+                                                requireNonNull(reservation.getEvent().getName())));
         }
 
         @Transactional
         public void approveRefund(UUID reservationId) {
                 Reservation reservation = reservationRepository
-                                .findByIdAndStatus(reservationId, ReservationStatus.REFUND_PENDING)
+                                .findByIdAndStatus(requireNonNull(reservationId), ReservationStatus.REFUND_PENDING)
                                 .orElseThrow(
                                                 () -> new ResourceNotFoundException("Reservation not found",
                                                                 ErrorCode.RESERVATION_NOT_FOUND));
 
-                User requestingUser = userRepository.findById(getCurrentUserId())
+                User requestingUser = userRepository.findById(requireNonNull(getCurrentUserId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("User not found",
                                                 ErrorCode.USER_NOT_FOUND));
 
@@ -270,21 +270,21 @@ public class ReservationService {
                 reservationRepository.save(reservation);
 
                 eventPublisher.publishEvent(
-                                new ReservationRefundedEvent(reservation.getUser().getId(),
-                                                reservation.getUser().getUsername(),
-                                                reservation.getUser().getEmail(), reservation.getId(),
-                                                reservation.getEvent().getName()));
+                                new ReservationRefundedEvent(requireNonNull(reservation.getUser().getId()),
+                                                requireNonNull(reservation.getUser().getUsername()),
+                                                requireNonNull(reservation.getUser().getEmail()), requireNonNull(reservation.getId()),
+                                                requireNonNull(reservation.getEvent().getName())));
         }
 
         @Transactional(readOnly = true)
         public Page<ReservationResponse> getAllReservations(Pageable pageable) {
-                return reservationRepository.findAll(pageable)
+                return reservationRepository.findAll(requireNonNull(pageable))
                                 .map(reservationMapper::toReservationResponse);
         }
 
         @Transactional(readOnly = true)
         public ReservationResponse getReservationById(UUID id) {
-                Reservation reservation = reservationRepository.findById(id)
+                Reservation reservation = reservationRepository.findById(requireNonNull(id))
                                 .orElseThrow(
                                                 () -> new ResourceNotFoundException("Reservation not found",
                                                                 ErrorCode.RESERVATION_NOT_FOUND));
@@ -296,7 +296,7 @@ public class ReservationService {
 
         @Transactional(readOnly = true)
         public ReservationDetailResponse getReservationDetails(UUID id) {
-                Reservation reservation = reservationRepository.findById(id)
+                Reservation reservation = reservationRepository.findById(requireNonNull(id))
                                 .orElseThrow(
                                                 () -> new ResourceNotFoundException("Reservation not found",
                                                                 ErrorCode.RESERVATION_NOT_FOUND));
@@ -307,7 +307,7 @@ public class ReservationService {
         }
 
         private void checkReadAccess(Reservation reservation) {
-                User requestingUser = userRepository.findById(getCurrentUserId())
+                User requestingUser = userRepository.findById(requireNonNull(getCurrentUserId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("User not found",
                                                 ErrorCode.USER_NOT_FOUND));
 

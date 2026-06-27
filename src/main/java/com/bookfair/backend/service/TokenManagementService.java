@@ -79,7 +79,7 @@ public class TokenManagementService {
         requireNonNull(jti, "jti cannot be null");
 
         String key = "password_reset:" + userId;
-        redisTemplate.opsForValue().set(key, jti, timeout, unit);
+        requireNonNull(redisTemplate.opsForValue()).set(key, jti, timeout, unit);
     }
 
     public void storeEmailVerificationToken(String userId, String jti, long timeout, TimeUnit unit) {
@@ -87,7 +87,7 @@ public class TokenManagementService {
         requireNonNull(jti, "jti cannot be null");
 
         String key = "email_verify:" + userId;
-        redisTemplate.opsForValue().set(key, jti, timeout, unit);
+        requireNonNull(redisTemplate.opsForValue()).set(key, jti, timeout, unit);
     }
 
     public boolean consumePasswordResetToken(String userId, String jti) {
@@ -95,10 +95,10 @@ public class TokenManagementService {
         requireNonNull(jti, "jti cannot be null");
 
         String key = "password_reset:" + userId;
-        String expectedJti = redisTemplate.opsForValue().get(key);
+        String expectedJti = requireNonNull(redisTemplate.opsForValue()).get(key);
 
         if (jti.equals(expectedJti)) {
-            redisTemplate.delete(key);
+            redisTemplate.delete(requireNonNull(key));
             log.info("Successfully consumed password reset lock for user [{}]", userId);
             return true;
         }
@@ -110,10 +110,10 @@ public class TokenManagementService {
         requireNonNull(jti, "jti cannot be null");
 
         String key = "email_verify:" + userId;
-        String expectedJti = redisTemplate.opsForValue().get(key);
+        String expectedJti = requireNonNull(redisTemplate.opsForValue()).get(key);
 
         if (jti.equals(expectedJti)) {
-            redisTemplate.delete(key);
+            redisTemplate.delete(requireNonNull(key));
             log.info("Successfully consumed email verification lock for user [{}]", userId);
             return true;
         }

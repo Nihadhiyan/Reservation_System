@@ -42,7 +42,7 @@ public class HallService {
         @Transactional
         public HallResponse createHall(CreateHallRequest request) {
                 requireNonNull(request, "request cannot be null");
-                Floor floor = floorRepository.findById(request.getFloorId())
+                Floor floor = floorRepository.findById(requireNonNull(request.getFloorId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("Floor not found",
                                                 ErrorCode.VENUE_NOT_FOUND));
 
@@ -71,7 +71,7 @@ public class HallService {
 
         @Transactional(readOnly = true)
         public HallResponse getHallById(UUID id) {
-                Hall hall = hallRepository.findById(id)
+                Hall hall = hallRepository.findById(requireNonNull(id))
                                 .orElseThrow(() -> new ResourceNotFoundException("Hall not found",
                                                 ErrorCode.HALL_NOT_FOUND));
 
@@ -80,7 +80,7 @@ public class HallService {
 
         @Transactional(readOnly = true)
         public HallLayoutResponse getHallLayout(UUID id) {
-                Hall hall = hallRepository.findById(id)
+                Hall hall = hallRepository.findById(requireNonNull(id))
                                 .orElseThrow(() -> new ResourceNotFoundException("Hall not found",
                                                 ErrorCode.HALL_NOT_FOUND));
 
@@ -89,11 +89,12 @@ public class HallService {
 
         @Transactional
         public HallResponse updateHall(UUID id, UpdateHallRequest request) {
-                Hall hall = hallRepository.findById(id)
+                requireNonNull(request, "request cannot be null");
+                Hall hall = hallRepository.findById(requireNonNull(id))
                                 .orElseThrow(() -> new ResourceNotFoundException("Hall not found",
                                                 ErrorCode.HALL_NOT_FOUND));
 
-                Floor floor = floorRepository.findById(request.getFloorId())
+                Floor floor = floorRepository.findById(requireNonNull(request.getFloorId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("Floor not found",
                                                 ErrorCode.VENUE_NOT_FOUND));
 
@@ -121,7 +122,7 @@ public class HallService {
 
         @Transactional
         public void deleteHall(UUID id) {
-                Hall hall = hallRepository.findById(id)
+                Hall hall = hallRepository.findById(requireNonNull(id))
                                 .orElseThrow(() -> new ResourceNotFoundException("Hall not found",
                                                 ErrorCode.HALL_NOT_FOUND));
 
@@ -131,7 +132,7 @@ public class HallService {
 
         @Transactional(readOnly = true)
         public List<StallResponse> getStallsByHall(UUID hallId) {
-                if (!hallRepository.existsById(hallId)) {
+                if (!hallRepository.existsById(requireNonNull(hallId))) {
                         throw new ResourceNotFoundException("Hall not found", ErrorCode.HALL_NOT_FOUND);
                 }
 

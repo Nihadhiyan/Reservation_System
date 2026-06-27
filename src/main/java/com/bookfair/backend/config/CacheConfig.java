@@ -1,6 +1,7 @@
 package com.bookfair.backend.config;
 
 import java.time.Duration;
+import java.util.Objects;
 
 import org.springframework.lang.Nullable;
 import org.springframework.lang.NonNull;
@@ -25,7 +26,7 @@ public class CacheConfig implements CachingConfigurer {
     public RedisCacheConfiguration cacheConfiguration() {
 
         return RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofMinutes(10))
+                .entryTtl(Objects.requireNonNull(Duration.ofMinutes(10)))
                 .disableCachingNullValues()
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
                         .fromSerializer(RedisSerializer.json()));

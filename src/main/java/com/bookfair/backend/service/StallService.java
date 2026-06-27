@@ -40,7 +40,7 @@ public class StallService {
 
     @Transactional(readOnly = true)
     public StallResponse getStallById(UUID id) {
-        Stall stall = stallRepository.findById(id)
+        Stall stall = stallRepository.findById(requireNonNull(id))
                 .orElseThrow(
                         () -> new ResourceNotFoundException("Physical Stall not found", ErrorCode.STALL_NOT_FOUND));
 
@@ -49,16 +49,16 @@ public class StallService {
 
     @Transactional
     public List<StallResponse> createStalls(List<CreateStallRequest> stallRequests, String currentUser) {
-        List<Stall> stalls = stallRequests.stream().map(stallMapper::toStallFromCreateStallRequest).toList();
+        List<Stall> stalls = requireNonNull(stallRequests).stream().map(stallMapper::toStallFromCreateStallRequest).toList();
 
         List<Stall> savedStalls = stallRepository.saveAll(stalls);
 
         savedStalls.forEach(savedStall -> {
             eventPublisher.publishEvent(new StallCreatedEvent(
-                    savedStall.getId(),
-                    savedStall.getName(),
-                    savedStall.getHall().getId(),
-                    currentUser));
+                    requireNonNull(savedStall.getId()),
+                    requireNonNull(savedStall.getName()),
+                    requireNonNull(savedStall.getHall().getId()),
+                    requireNonNull(currentUser)));
             log.info("Stall {} created successfully", savedStall.getName());
         });
 
@@ -67,7 +67,7 @@ public class StallService {
 
     @Transactional
     public StallResponse updateStall(UUID id, UpdateStallRequest stallRequest) {
-        Stall stall = stallRepository.findById(id)
+        Stall stall = stallRepository.findById(requireNonNull(id))
                 .orElseThrow(
                         () -> new ResourceNotFoundException("Physical Stall not found", ErrorCode.STALL_NOT_FOUND));
 
@@ -79,8 +79,8 @@ public class StallService {
 
         if (stallRequest.getActive() != null && !(stallRequest.getActive() ? "ACTIVE" : "INACTIVE").equals(oldStatus)) {
             eventPublisher.publishEvent(new StallStatusChangedEvent(
-                    updatedStall.getId(),
-                    updatedStall.getName(),
+                    requireNonNull(updatedStall.getId()),
+                    requireNonNull(updatedStall.getName()),
                     oldStatus,
                     updatedStall.getActive() ? "ACTIVE" : "INACTIVE"));
         }
@@ -90,7 +90,7 @@ public class StallService {
 
     @Transactional
     public StallResponse updateStallStatus(UUID stallId, String newStatus) {
-        Stall stall = stallRepository.findById(stallId)
+        Stall stall = stallRepository.findById(requireNonNull(stallId))
                 .orElseThrow(
                         () -> new ResourceNotFoundException("Physical Stall not found", ErrorCode.STALL_NOT_FOUND));
 
@@ -100,10 +100,10 @@ public class StallService {
         Stall updatedStall = stallRepository.save(stall);
 
         eventPublisher.publishEvent(new StallStatusChangedEvent(
-                updatedStall.getId(),
-                updatedStall.getName(),
+                requireNonNull(updatedStall.getId()),
+                requireNonNull(updatedStall.getName()),
                 oldStatus,
-                newStatus));
+                requireNonNull(newStatus)));
 
         return stallMapper.toStallResponse(updatedStall);
     }
@@ -116,7 +116,7 @@ public class StallService {
 
     @Transactional
     public void deactivateStall(List<UUID> ids) {
-        List<Stall> stalls = stallRepository.findAllByIdInAndActiveTrue(ids);
+        List<Stall> stalls = stallRepository.findAllByIdInAndActiveTrue(requireNonNull(ids));
         for (Stall stall : stalls) {
             stall.setActive(false);
         }

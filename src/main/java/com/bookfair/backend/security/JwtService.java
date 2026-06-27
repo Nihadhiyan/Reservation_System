@@ -1,5 +1,6 @@
 package com.bookfair.backend.security;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -109,8 +110,8 @@ public class JwtService {
         return UUID.fromString(extractClaim(token, Claims::getSubject));
     }
 
-    public Date extractIssuedAt(String token) {
-        return extractClaim(token, Claims::getIssuedAt);
+    public Instant extractIssuedAt(String token) {
+        return extractClaim(token, claims -> claims.getIssuedAt().toInstant());
     }
 
     public String extractJti(String token) {
@@ -146,19 +147,19 @@ public class JwtService {
 
     public long getRemainingExpirationTime(String token) {
 
-        Date expiration = extractExpiration(token);
-        long remaining = expiration.getTime() - System.currentTimeMillis();
+        Instant expiration = extractExpiration(token);
+        long remaining = expiration.toEpochMilli() - System.currentTimeMillis();
 
         return remaining > 0 ? remaining : 0;
     }
 
     public boolean isTokenExpired(String token) {
 
-        return extractExpiration(token).before(new Date());
+        return extractExpiration(token).isBefore(Instant.now());
     }
 
-    private Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
+    public Instant extractExpiration(String token) {
+        return extractClaim(token, claims -> claims.getExpiration().toInstant());
     }
 
     public long getAccessTokenExpirationTime() {

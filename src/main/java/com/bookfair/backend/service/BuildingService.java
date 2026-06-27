@@ -37,7 +37,7 @@ public class BuildingService {
     @Transactional
     public BuildingResponse createBuilding(CreateBuildingRequest request) {
         requireNonNull(request, "request cannot be null");
-        Venue venue = venueRepository.findById(request.getVenueId())
+        Venue venue = venueRepository.findById(requireNonNull(request.getVenueId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Venue not found", ErrorCode.VENUE_NOT_FOUND));
 
         Building building = buildingMapper.toBuildingFromCreateBuildingRequest(request);
@@ -51,7 +51,7 @@ public class BuildingService {
 
     @Transactional(readOnly = true)
     public BuildingResponse getBuildingById(UUID id) {
-        Building building = buildingRepository.findById(id)
+        Building building = buildingRepository.findById(requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Building not found", ErrorCode.VENUE_NOT_FOUND));
 
         return buildingMapper.toBuildingResponse(building);
@@ -59,10 +59,11 @@ public class BuildingService {
 
     @Transactional
     public BuildingResponse updateBuilding(UUID id, UpdateBuildingRequest request) {
-        Building building = buildingRepository.findById(id)
+        requireNonNull(request, "request cannot be null");
+        Building building = buildingRepository.findById(requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Building not found", ErrorCode.VENUE_NOT_FOUND));
 
-        Venue venue = venueRepository.findById(request.getVenueId())
+        Venue venue = venueRepository.findById(requireNonNull(request.getVenueId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Venue not found", ErrorCode.VENUE_NOT_FOUND));
 
         buildingMapper.updateBuildingFromBuildingRequest(request, building);
@@ -75,7 +76,7 @@ public class BuildingService {
 
     @Transactional
     public void deleteBuilding(UUID id) {
-        Building building = buildingRepository.findById(id)
+        Building building = buildingRepository.findById(requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Building not found", ErrorCode.VENUE_NOT_FOUND));
 
         building.setActive(false);
@@ -84,7 +85,7 @@ public class BuildingService {
 
     @Transactional(readOnly = true)
     public List<FloorResponse> getFloorsByBuilding(UUID buildingId) {
-        if (!buildingRepository.existsById(buildingId)) {
+        if (!buildingRepository.existsById(requireNonNull(buildingId))) {
             throw new ResourceNotFoundException("Building not found", ErrorCode.VENUE_NOT_FOUND);
         }
 

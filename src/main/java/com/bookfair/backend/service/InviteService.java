@@ -32,7 +32,7 @@ public class InviteService {
         Objects.requireNonNull(request.getEmail(), "Email must not be null");
         Objects.requireNonNull(request.getRole(), "Role must not be null");
 
-        Organization org = organizationRepository.findById(request.getOrgId())
+        Organization org = organizationRepository.findById(Objects.requireNonNull(request.getOrgId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found",
                         ErrorCode.ORGANIZATION_NOT_FOUND));
 
@@ -64,7 +64,7 @@ public class InviteService {
         Objects.requireNonNull(token, "Token must not be null");
         Objects.requireNonNull(userId, "User ID must not be null");
 
-        OrganizationInvite invite = inviteRepository.findByToken(token)
+        OrganizationInvite invite = inviteRepository.findByToken(Objects.requireNonNull(token))
                 .orElseThrow(
                         () -> new ResourceNotFoundException("Invalid or expired token", ErrorCode.VALIDATION_ERROR));
 
@@ -76,7 +76,7 @@ public class InviteService {
             throw new BusinessException("Invite has expired", ErrorCode.BUSINESS_RULE_VIOLATION);
         }
 
-        User user = userRepository.findById(userId)
+        User user = userRepository.findById(Objects.requireNonNull(userId))
                 .orElseThrow(() -> new ResourceNotFoundException("User not found", ErrorCode.USER_NOT_FOUND));
 
         if (!user.getEmail().equalsIgnoreCase(invite.getEmail())) {
@@ -84,12 +84,12 @@ public class InviteService {
                     ErrorCode.BUSINESS_RULE_VIOLATION);
         }
 
-        Organization org = organizationRepository.findById(invite.getOrganizationId())
+        Organization org = organizationRepository.findById(Objects.requireNonNull(invite.getOrganizationId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found",
                         ErrorCode.ORGANIZATION_NOT_FOUND));
 
         // Check if member already exists
-        if (memberRepository.existsByUserIdAndOrganizationId(user.getId(), org.getId())) {
+        if (memberRepository.existsByUserIdAndOrganizationId(Objects.requireNonNull(user.getId()), Objects.requireNonNull(org.getId()))) {
             throw new BusinessException("User is already a member of this organization",
                     ErrorCode.BUSINESS_RULE_VIOLATION);
         }

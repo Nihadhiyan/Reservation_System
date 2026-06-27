@@ -2,6 +2,7 @@ package com.bookfair.backend.listener;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -88,7 +89,7 @@ public class NotificationEventListener {
                 }
             }
             case PasswordResetRequestedEvent e -> {
-                userRepository.findById(e.userId()).ifPresent(user -> {
+                userRepository.findById(Objects.requireNonNull(e.userId())).ifPresent(user -> {
                     Map<String, Object> vars = Map.of(
                             "userName", user.getUsername(),
                             "resetLink", e.resetLink());
@@ -97,7 +98,7 @@ public class NotificationEventListener {
                 });
             }
             case UserEmailVerificationRequestedEvent e -> {
-                userRepository.findById(e.userId()).ifPresent(user -> {
+                userRepository.findById(Objects.requireNonNull(e.userId())).ifPresent(user -> {
                     Map<String, Object> vars = Map.of(
                             "userName", user.getUsername(),
                             "verificationLink", e.verificationLink());

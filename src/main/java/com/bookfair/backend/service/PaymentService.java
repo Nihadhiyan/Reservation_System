@@ -40,7 +40,7 @@ public class PaymentService {
     @Transactional
     public PaymentResponse initializePayment(CreatePaymentRequest request, String gatewayType) {
         requireNonNull(request, "request cannot be null");
-        Reservation reservation = reservationRepository.findById(request.getReservationId())
+        Reservation reservation = reservationRepository.findById(requireNonNull(request.getReservationId()))
                 .orElseThrow(
                         () -> new ResourceNotFoundException("Reservation not found", ErrorCode.RESERVATION_NOT_FOUND));
 
@@ -52,7 +52,7 @@ public class PaymentService {
         }
 
         PaymentGateway adapter = paymentGateways.stream()
-                .filter(gateway -> gateway.supports(gatewayType))
+                .filter(gateway -> gateway.supports(requireNonNull(gatewayType)))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException("Unsupported payment gateway: " + gatewayType,
                         ErrorCode.BUSINESS_RULE_VIOLATION));
@@ -74,7 +74,7 @@ public class PaymentService {
     @Transactional
     public void processWebhook(String payload, String signatureHeader, String gatewayType) {
         PaymentGateway adapter = paymentGateways.stream()
-                .filter(gateway -> gateway.supports(gatewayType))
+                .filter(gateway -> gateway.supports(requireNonNull(gatewayType)))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException("Unsupported payment gateway: " + gatewayType,
                         ErrorCode.BUSINESS_RULE_VIOLATION));
@@ -86,10 +86,10 @@ public class PaymentService {
             return;
         }
 
-        Payment payment = paymentRepository.findByTransactionId(result.transactionId())
+        Payment payment = paymentRepository.findByTransactionId(requireNonNull(result.transactionId()))
                 .orElseGet(() -> {
                     // Fallback to searching by reservationId if transaction ID wasn't saved yet
-                    Reservation reservation = reservationRepository.findById(result.reservationId())
+                    Reservation reservation = reservationRepository.findById(requireNonNull(result.reservationId()))
                             .orElseThrow(() -> new ResourceNotFoundException("Reservation not found",
                                     ErrorCode.RESERVATION_NOT_FOUND));
 
@@ -113,15 +113,15 @@ public class PaymentService {
 
         if (status == Payment.PaymentStatus.COMPLETED) {
             eventPublisher.publishEvent(new PaymentCompletedEvent(
-                    payment.getReservation().getId(),
-                    saved.getTransactionId(),
-                    saved.getAmount()));
+                    requireNonNull(payment.getReservation().getId()),
+                    requireNonNull(saved.getTransactionId()),
+                    requireNonNull(saved.getAmount())));
         }
     }
 
     @Transactional(readOnly = true)
     public PaymentResponse getPaymentStatus(UUID transactionId) {
-        Payment payment = paymentRepository.findById(transactionId)
+        Payment payment = paymentRepository.findById(requireNonNull(transactionId))
                 .orElseThrow(
                         () -> new ResourceNotFoundException("Payment not found", ErrorCode.BUSINESS_RULE_VIOLATION));
 

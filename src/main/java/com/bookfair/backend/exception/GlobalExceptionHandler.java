@@ -12,8 +12,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 
-import com.bookfair.backend.exception.ErrorCode;
-
 import com.bookfair.backend.dto.common.ErrorResponse;
 
 import jakarta.validation.ConstraintViolation;

@@ -73,7 +73,7 @@ public class EventService {
 
         @Transactional(readOnly = true)
         public List<EventStallResponse> getStallsForEvent(UUID eventId) {
-                Event event = eventRepository.findByIdAndActiveTrue(eventId)
+                Event event = eventRepository.findByIdAndActiveTrue(requireNonNull(eventId))
                                 .orElseThrow(() -> new ResourceNotFoundException("Event not found",
                                                 ErrorCode.EVENT_NOT_FOUND));
 
@@ -84,15 +84,16 @@ public class EventService {
 
         @Transactional
         public EventResponse createEvent(CreateEventRequest request) {
-                Organization organizer = organizationRepository.findById(request.getOrganizerId())
+                requireNonNull(request, "request cannot be null");
+                Organization organizer = organizationRepository.findById(requireNonNull(request.getOrganizerId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found",
                                                 ErrorCode.ORGANIZATION_NOT_FOUND));
 
-                Venue venue = venueRepository.findById(request.getVenueId())
+                Venue venue = venueRepository.findById(requireNonNull(request.getVenueId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("Venue not found",
                                                 ErrorCode.VENUE_NOT_FOUND));
 
-                User requestingUser = userRepository.findById(getCurrentUserId())
+                User requestingUser = userRepository.findById(requireNonNull(getCurrentUserId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("User not found",
                                                 ErrorCode.USER_NOT_FOUND));
 
@@ -107,7 +108,7 @@ public class EventService {
                 }
 
                 List<Organization> partners = (request.getPartnerIds() != null && !request.getPartnerIds().isEmpty())
-                                ? organizationRepository.findAllById(request.getPartnerIds())
+                                ? organizationRepository.findAllById(requireNonNull(request.getPartnerIds()))
                                 : List.of();
 
                 Event event = new Event();
@@ -126,19 +127,20 @@ public class EventService {
 
         @Transactional
         public EventResponse updateEvent(UUID id, UpdateEventRequest request) {
-                Event event = eventRepository.findByIdAndActiveTrue(id)
+                requireNonNull(request, "request cannot be null");
+                Event event = eventRepository.findByIdAndActiveTrue(requireNonNull(id))
                                 .orElseThrow(() -> new ResourceNotFoundException("Event not found",
                                                 ErrorCode.EVENT_NOT_FOUND));
 
-                Organization organizer = organizationRepository.findById(request.getOrganizerId())
+                Organization organizer = organizationRepository.findById(requireNonNull(request.getOrganizerId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found",
                                                 ErrorCode.ORGANIZATION_NOT_FOUND));
 
-                Venue venue = venueRepository.findById(request.getVenueId())
+                Venue venue = venueRepository.findById(requireNonNull(request.getVenueId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("Venue not found",
                                                 ErrorCode.VENUE_NOT_FOUND));
 
-                User requestingUser = userRepository.findById(getCurrentUserId())
+                User requestingUser = userRepository.findById(requireNonNull(getCurrentUserId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("User not found",
                                                 ErrorCode.USER_NOT_FOUND));
 
@@ -165,7 +167,7 @@ public class EventService {
                 }
 
                 List<Organization> partners = (request.getPartnerIds() != null && !request.getPartnerIds().isEmpty())
-                                ? organizationRepository.findAllById(request.getPartnerIds())
+                                ? organizationRepository.findAllById(requireNonNull(request.getPartnerIds()))
                                 : List.of();
 
                 event.setName(request.getName());
@@ -183,11 +185,11 @@ public class EventService {
 
         @Transactional
         public void deleteEvent(UUID id) {
-                Event event = eventRepository.findByIdAndActiveTrue(id)
+                Event event = eventRepository.findByIdAndActiveTrue(requireNonNull(id))
                                 .orElseThrow(() -> new ResourceNotFoundException("Event not found",
                                                 ErrorCode.EVENT_NOT_FOUND));
 
-                User requestingUser = userRepository.findById(getCurrentUserId())
+                User requestingUser = userRepository.findById(requireNonNull(getCurrentUserId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("User not found",
                                                 ErrorCode.USER_NOT_FOUND));
 
