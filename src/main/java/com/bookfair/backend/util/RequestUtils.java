@@ -11,7 +11,7 @@ public final class RequestUtils {
     public static String getClientIpAddress(HttpServletRequest request) {
         Objects.requireNonNull(request, "HttpServletRequest cannot be null when extracting client IP");
 
-        // Step 1: Inspect X-Forwarded-For header injected by upstream load
+        // Inspecting X-Forwarded-For header injected by upstream load
         // balancers/proxies
         String header = request.getHeader("X-Forwarded-For");
         if (header != null && !header.isBlank() && !"unknown".equalsIgnoreCase(header)) {
@@ -23,31 +23,17 @@ public final class RequestUtils {
             return sanitizeIp(clientIp);
         }
 
-        // Step 2: Check X-Real-IP fallback commonly set by NGINX ingress controllers
+        // Checking X-Real-IP fallback commonly set by NGINX ingress controllers
         header = request.getHeader("X-Real-IP");
         if (header != null && !header.isBlank() && !"unknown".equalsIgnoreCase(header)) {
             return sanitizeIp(header.trim());
         }
 
-        // Step 3: Fall back to raw socket remote address if no reverse proxy headers
-        // exist
+        // Fallback to raw socket remote address if no reverse proxy headers
         String remoteAddr = request.getRemoteAddr();
         return sanitizeIp(remoteAddr != null ? remoteAddr : "UNKNOWN");
     }
 
-    /**
-     * Extracts client device signature from the HTTP User-Agent header.
-     * <p>
-     * Capturing device signature allows users to identify session origins during
-     * security
-     * audits (e.g., viewing active sessions showing "Mozilla/5.0 (Macintosh; Intel
-     * Mac OS X...)").
-     * </p>
-     *
-     * @param request The servlet request containing client headers; must not be
-     *                null.
-     * @return Truncated device info string, or "UNKNOWN_DEVICE" if missing.
-     */
     public static String getDeviceInfo(HttpServletRequest request) {
         Objects.requireNonNull(request, "HttpServletRequest cannot be null when extracting device info");
 
@@ -56,15 +42,12 @@ public final class RequestUtils {
             return "UNKNOWN_DEVICE";
         }
 
-        // Truncate length to 512 characters to prevent database column overflow
-        // exceptions
+        // Truncating length to 512 characters to prevent database column overflow
         return userAgent.length() > 512 ? userAgent.substring(0, 512) : userAgent;
     }
 
-    /**
-     * Ensures extracted IP addresses fit within the database IPv6 column boundary
-     * (45 characters).
-     */
+    // Ensuring extracted IP addresses fit within the database IPv6 column boundary
+    // (45 characters).
     private static String sanitizeIp(String ip) {
         if (ip == null) {
             return "UNKNOWN";

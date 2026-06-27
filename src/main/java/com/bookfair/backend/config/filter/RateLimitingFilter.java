@@ -15,6 +15,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.lang.NonNull;
 
 import com.bookfair.backend.service.RateLimitingService;
+import com.bookfair.backend.util.RequestUtils;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,14 +27,14 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
     private final RateLimitingService rateLimitingService;
 
-    // Define your global limits here
     private static final int MAX_REQUESTS_PER_MINUTE = 100;
     private static final int TIME_WINDOW_SECONDS = 60;
 
-    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
+    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Extract client IP
+        // Extracting client IP
         String clientKey = determineClientIdentifier(request);
 
         boolean allowed = rateLimitingService.isAllowed(clientKey, MAX_REQUESTS_PER_MINUTE, TIME_WINDOW_SECONDS);
@@ -61,10 +62,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             return "user:" + authentication.getName();
         }
 
-        String ipAddress = request.getHeader("X-Forwarded-For");
-        if (ipAddress == null || ipAddress.isEmpty()) {
-            ipAddress = request.getRemoteAddr();
-        }
+        String ipAddress = RequestUtils.getClientIpAddress(request);
 
         return "ip:" + ipAddress;
     }
