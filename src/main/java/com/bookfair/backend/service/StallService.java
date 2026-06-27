@@ -49,9 +49,10 @@ public class StallService {
 
     @Transactional
     public List<StallResponse> createStalls(List<CreateStallRequest> stallRequests, String currentUser) {
-        List<Stall> stalls = requireNonNull(stallRequests).stream().map(stallMapper::toStallFromCreateStallRequest).toList();
+        List<Stall> stalls = requireNonNull(stallRequests).stream().map(stallMapper::toStallFromCreateStallRequest)
+                .toList();
 
-        List<Stall> savedStalls = stallRepository.saveAll(stalls);
+        List<Stall> savedStalls = stallRepository.saveAll(requireNonNull(stalls));
 
         savedStalls.forEach(savedStall -> {
             eventPublisher.publishEvent(new StallCreatedEvent(
@@ -120,6 +121,6 @@ public class StallService {
         for (Stall stall : stalls) {
             stall.setActive(false);
         }
-        stallRepository.saveAll(stalls);
+        stallRepository.saveAll(requireNonNull(stalls));
     }
 }

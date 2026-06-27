@@ -77,6 +77,7 @@ public class TokenManagementService {
     public void storePasswordResetToken(String userId, String jti, long timeout, TimeUnit unit) {
         requireNonNull(userId, "userId cannot be null");
         requireNonNull(jti, "jti cannot be null");
+        requireNonNull(unit, "unit cannot be null");
 
         String key = "password_reset:" + userId;
         requireNonNull(redisTemplate.opsForValue()).set(key, jti, timeout, unit);
@@ -85,6 +86,7 @@ public class TokenManagementService {
     public void storeEmailVerificationToken(String userId, String jti, long timeout, TimeUnit unit) {
         requireNonNull(userId, "userId cannot be null");
         requireNonNull(jti, "jti cannot be null");
+        requireNonNull(unit, "unit cannot be null");
 
         String key = "email_verify:" + userId;
         requireNonNull(redisTemplate.opsForValue()).set(key, jti, timeout, unit);

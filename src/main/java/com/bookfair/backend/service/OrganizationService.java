@@ -73,7 +73,7 @@ public class OrganizationService {
         }
 
         Organization organization = organizationMapper.toOrganizationFromCreateOrganizationRequest(request);
-        Organization savedOrganization = organizationRepository.save(organization);
+        Organization savedOrganization = organizationRepository.save(requireNonNull(organization));
 
         return organizationMapper.toOrganizationResponse(savedOrganization);
     }

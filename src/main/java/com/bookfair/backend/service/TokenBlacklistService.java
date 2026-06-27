@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import static java.util.Objects.requireNonNull;
+
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
@@ -26,7 +28,9 @@ public class TokenBlacklistService {
         long currentEpochSeconds = Instant.now().getEpochSecond();
 
         try {
-            Objects.requireNonNull(redisTemplate.opsForValue()).set(redisKey, String.valueOf(currentEpochSeconds), 2, TimeUnit.HOURS);
+            Objects.requireNonNull(redisTemplate.opsForValue()).set(redisKey,
+                    requireNonNull(String.valueOf(currentEpochSeconds)), 2,
+                    TimeUnit.HOURS);
             log.info("Security checkpoint activated for user [{}]. All JWTs issued before epoch {} are invalidated.",
                     userId, currentEpochSeconds);
         } catch (Exception e) {

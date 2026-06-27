@@ -75,14 +75,16 @@ public class UserService {
 
                 if (userUpdateRequest.getUsername() != null &&
                                 !userUpdateRequest.getUsername().equals(user.getUsername()) &&
-                                userRepository.existsByUsernameAndActiveTrue(requireNonNull(userUpdateRequest.getUsername()))) {
+                                userRepository.existsByUsernameAndActiveTrue(
+                                                requireNonNull(userUpdateRequest.getUsername()))) {
                         throw new DuplicateResourceException("Username is already taken.",
                                         ErrorCode.DUPLICATE_USERNAME);
                 }
 
                 if (userUpdateRequest.getEmail() != null &&
                                 !userUpdateRequest.getEmail().equals(user.getEmail()) &&
-                                userRepository.existsByEmailAndActiveTrue(requireNonNull(userUpdateRequest.getEmail()))) {
+                                userRepository.existsByEmailAndActiveTrue(
+                                                requireNonNull(userUpdateRequest.getEmail()))) {
 
                         throw new DuplicateResourceException("That email is already in use by another account.",
                                         ErrorCode.DUPLICATE_EMAIL);
@@ -90,7 +92,7 @@ public class UserService {
 
                 userMapper.updateUserFromRequest(userUpdateRequest, user);
 
-                User updatedUser = userRepository.save(user);
+                User updatedUser = userRepository.save(requireNonNull(user));
 
                 publishUserUpdatedEvent(user);
 

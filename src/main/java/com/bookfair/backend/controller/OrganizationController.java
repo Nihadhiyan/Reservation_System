@@ -35,7 +35,8 @@ public class OrganizationController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<ApiResponseDto<OrganizationResponse>> createOrganization(@RequestBody @Valid CreateOrganizationRequest request) {
+    public ResponseEntity<ApiResponseDto<OrganizationResponse>> createOrganization(
+            @RequestBody @Valid CreateOrganizationRequest request) {
         OrganizationResponse response = organizationService.createOrganization(request);
         return ResponseEntity
                 .ok(new ApiResponseDto<>(true, "Organization created successfully", response, Instant.now()));
