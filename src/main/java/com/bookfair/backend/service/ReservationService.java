@@ -95,7 +95,8 @@ public class ReservationService {
                                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found",
                                                 ErrorCode.ORGANIZATION_NOT_FOUND));
 
-                if (!memberRepository.existsByUserIdAndOrganizationId(requireNonNull(user.getId()), requireNonNull(organization.getId()))) {
+                if (!memberRepository.existsByUserIdAndOrganizationId(requireNonNull(user.getId()),
+                                requireNonNull(organization.getId()))) {
                         throw new BusinessException(
                                         "User must belong to the organization to make a reservation on its behalf.",
                                         ErrorCode.BUSINESS_RULE_VIOLATION);
@@ -124,37 +125,26 @@ public class ReservationService {
                         }
                 }
 
-                Reservation reservation = new Reservation();
-                reservation.setUser(user);
-                reservation.setOrganization(organization);
-                reservation.setReservationCreatedBy(user);
-                reservation.setEvent(event);
-                reservation.setGenre(genre);
+                Instant startDateTime = request.getReservationStartDateTime() != null
+                                ? request.getReservationStartDateTime()
+                                : event.getStartDateTime();
+                Instant expiresAt = Instant.now().plus(15, ChronoUnit.MINUTES);
 
-                reservation.setReservationStartDateTime(
-                                request.getReservationStartDateTime() != null
-                                                ? request.getReservationStartDateTime()
-                                                : event.getStartDateTime());
-
-                reservation.setExpiresAt(Instant.now().plus(15, ChronoUnit.MINUTES));
-                reservation.setStatus(ReservationStatus.PENDING);
+                Reservation reservation = reservationMapper.toReservation(
+                                user, organization, user, event, genre, startDateTime, expiresAt);
 
                 List<ReservationStall> reservationStalls = stalls.stream()
                                 .map(s -> {
                                         s.setStatus(AvailabilityStatus.BLOCKED);
-
-                                        ReservationStall rs = new ReservationStall();
-                                        rs.setEventStall(s);
-                                        rs.setReservation(reservation);
-                                        rs.setPriceAtBooking(pricingEngineService.calculateFinalPrice(s));
-
-                                        return rs;
+                                        return reservationMapper.toReservationStall(s, reservation,
+                                                        pricingEngineService.calculateFinalPrice(s));
                                 })
                                 .toList();
 
                 BigDecimal totalPrice = reservationStalls.stream()
-                                .map(ReservationStall::getPriceAtBooking)
-                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                                .map(rs -> rs.getPriceAtBooking())
+                                .filter(price -> price != null)
+                                .reduce(BigDecimal.ZERO, (p1, p2) -> p1.add(p2));
 
                 reservation.setTotalPrice(totalPrice);
                 reservation.setReservedStalls(reservationStalls);
@@ -162,8 +152,10 @@ public class ReservationService {
                 eventStallRepository.saveAll(stalls);
                 Reservation savedReservation = reservationRepository.save(reservation);
 
-                eventPublisher.publishEvent(new ReservationRequestReceivedEvent(requireNonNull(user.getId()), requireNonNull(user.getUsername()),
-                                requireNonNull(user.getEmail()), requireNonNull(savedReservation.getId()), requireNonNull(event.getName())));
+                eventPublisher.publishEvent(new ReservationRequestReceivedEvent(requireNonNull(user.getId()),
+                                requireNonNull(user.getUsername()),
+                                requireNonNull(user.getEmail()), requireNonNull(savedReservation.getId()),
+                                requireNonNull(event.getName())));
 
                 return reservationMapper.toReservationResponse(savedReservation);
         }
@@ -205,7 +197,8 @@ public class ReservationService {
                 reservationRepository.save(reservation);
 
                 eventPublisher.publishEvent(new ReservationConfirmedEvent(requireNonNull(reservation.getUser().getId()),
-                                requireNonNull(reservation.getUser().getUsername()), requireNonNull(reservation.getUser().getEmail()),
+                                requireNonNull(reservation.getUser().getUsername()),
+                                requireNonNull(reservation.getUser().getEmail()),
                                 requireNonNull(reservation.getId()),
                                 requireNonNull(reservation.getEvent().getName()), requireNonNull(qrCodeImage)));
         }
@@ -238,7 +231,8 @@ public class ReservationService {
                 eventPublisher.publishEvent(
                                 new ReservationRefundPendingEvent(requireNonNull(reservation.getUser().getId()),
                                                 requireNonNull(reservation.getUser().getUsername()),
-                                                requireNonNull(reservation.getUser().getEmail()), requireNonNull(reservation.getId()),
+                                                requireNonNull(reservation.getUser().getEmail()),
+                                                requireNonNull(reservation.getId()),
                                                 requireNonNull(reservation.getEvent().getName())));
         }
 
@@ -272,7 +266,8 @@ public class ReservationService {
                 eventPublisher.publishEvent(
                                 new ReservationRefundedEvent(requireNonNull(reservation.getUser().getId()),
                                                 requireNonNull(reservation.getUser().getUsername()),
-                                                requireNonNull(reservation.getUser().getEmail()), requireNonNull(reservation.getId()),
+                                                requireNonNull(reservation.getUser().getEmail()),
+                                                requireNonNull(reservation.getId()),
                                                 requireNonNull(reservation.getEvent().getName())));
         }
 

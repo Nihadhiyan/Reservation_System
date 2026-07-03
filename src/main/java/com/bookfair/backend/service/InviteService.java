@@ -1,5 +1,6 @@
 package com.bookfair.backend.service;
 
+import com.bookfair.backend.dto.organization.mapper.OrganizationMapper;
 import com.bookfair.backend.dto.organization.request.InviteRequest;
 import com.bookfair.backend.exception.BusinessException;
 import com.bookfair.backend.exception.ErrorCode;
@@ -24,6 +25,7 @@ public class InviteService {
     private final OrganizationMemberRepository memberRepository;
     private final OrganizationRepository organizationRepository;
     private final EmailService emailService;
+    private final OrganizationMapper organizationMapper;
 
     @Transactional
     public void inviteUser(InviteRequest request) {
@@ -38,16 +40,11 @@ public class InviteService {
 
         // Generate token
         String token = UUID.randomUUID().toString();
+        Instant expiresAt = Instant.now().plus(7, ChronoUnit.DAYS);
 
-        OrganizationInvite invite = new OrganizationInvite();
-        invite.setOrganizationId(org.getId());
-        invite.setEmail(request.getEmail());
-        invite.setAssignedRole(request.getRole());
-        invite.setToken(token);
-        invite.setExpiresAt(Instant.now().plus(7, ChronoUnit.DAYS));
-        invite.setUsed(false);
+        OrganizationInvite invite = organizationMapper.toOrganizationInvite(org.getId(), request, token, expiresAt);
 
-        inviteRepository.save(invite);
+        inviteRepository.save(Objects.requireNonNull(invite));
 
         // Send email
         String acceptLink = "https://frontend-url/accept-invite?token=" + token;
@@ -89,19 +86,17 @@ public class InviteService {
                         ErrorCode.ORGANIZATION_NOT_FOUND));
 
         // Check if member already exists
-        if (memberRepository.existsByUserIdAndOrganizationId(Objects.requireNonNull(user.getId()), Objects.requireNonNull(org.getId()))) {
+        if (memberRepository.existsByUserIdAndOrganizationId(Objects.requireNonNull(user.getId()),
+                Objects.requireNonNull(org.getId()))) {
             throw new BusinessException("User is already a member of this organization",
                     ErrorCode.BUSINESS_RULE_VIOLATION);
         }
 
-        OrganizationMember member = new OrganizationMember();
-        member.setUser(user);
-        member.setOrganization(org);
-        member.setRole(invite.getAssignedRole());
+        OrganizationMember member = organizationMapper.toOrganizationMember(user, org, invite.getAssignedRole());
 
-        memberRepository.save(member);
+        memberRepository.save(Objects.requireNonNull(member));
 
         invite.setUsed(true);
-        inviteRepository.save(invite);
+        inviteRepository.save(Objects.requireNonNull(invite));
     }
 }

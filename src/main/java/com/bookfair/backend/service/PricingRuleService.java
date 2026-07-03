@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.bookfair.backend.dto.pricing.mapper.PricingMapper;
 import com.bookfair.backend.dto.pricing.request.PricingRuleRequest;
 import com.bookfair.backend.dto.pricing.response.PricingRuleResponse;
 import com.bookfair.backend.model.PricingRule;
@@ -22,46 +23,26 @@ public class PricingRuleService {
 
     private final PricingRuleRepository pricingRuleRepository;
     private final PricingRuleValidator pricingRuleValidator;
+    private final PricingMapper pricingMapper;
 
     @Transactional(readOnly = true)
     public List<PricingRuleResponse> getActiveRules() {
-        return pricingRuleRepository.findAllByActiveTrue().stream().map(rule -> {
-            PricingRuleResponse response = new PricingRuleResponse();
-            response.setId(rule.getId());
-            response.setName(rule.getName());
-            response.setDescription(rule.getDescription());
-            response.setConditionType(rule.getConditionType());
-            response.setConditionValue(rule.getConditionValue());
-            response.setMultiplier(rule.getMultiplier());
-            response.setActive(rule.getActive());
-            return response;
-        }).collect(Collectors.toList());
+        return pricingRuleRepository.findAllByActiveTrue().stream()
+                .map(pricingMapper::toPricingRuleResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional
     public PricingRuleResponse createPricingRule(PricingRuleRequest request) {
         pricingRuleValidator.validate(request.getConditionType(), request.getConditionValue());
 
-        PricingRule rule = new PricingRule();
-        rule.setName(request.getName());
-        rule.setDescription(request.getDescription());
-        rule.setConditionType(request.getConditionType());
-        rule.setConditionValue(request.getConditionValue());
-        rule.setMultiplier(request.getMultiplier());
+        PricingRule rule = pricingMapper.toPricingRule(request);
         rule.setActive(true);
 
         PricingRule saved = pricingRuleRepository.save(rule);
 
-        PricingRuleResponse response = new PricingRuleResponse();
-        response.setId(saved.getId());
-        response.setName(saved.getName());
-        response.setDescription(saved.getDescription());
-        response.setConditionType(saved.getConditionType());
-        response.setConditionValue(saved.getConditionValue());
-        response.setMultiplier(saved.getMultiplier());
-        response.setActive(saved.getActive());
-
         log.info("Created new pricing rule: {}", saved.getName());
-        return response;
+        return pricingMapper.toPricingRuleResponse(saved);
     }
 }
+

@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.bookfair.backend.dto.pricing.mapper.PricingMapper;
 import com.bookfair.backend.dto.pricing.response.PricingBreakdownResponse;
 import com.bookfair.backend.dto.pricing.response.StallPricingResponse;
 import com.bookfair.backend.model.PricingRule;
@@ -30,6 +31,7 @@ public class PricingEngineService {
     private final PricingRuleRepository pricingRuleRepository;
     private final StallRepository stallRepository;
     private final Map<String, PricingStrategy> strategies;
+    private final PricingMapper pricingMapper;
 
     @Transactional(readOnly = true)
     public PricingBreakdownResponse calculateQuote(List<UUID> stallIds, int durationDays, String orgType) {
@@ -60,11 +62,7 @@ public class PricingEngineService {
 
             subtotal = subtotal.add(currentPrice);
 
-            StallPricingResponse spr = new StallPricingResponse();
-            spr.setStallId(stall.getId());
-            spr.setStallName(stall.getName());
-            spr.setBasePrice(basePrice);
-            spr.setFinalPrice(currentPrice);
+            StallPricingResponse spr = pricingMapper.toStallPricingResponse(stall.getId(), stall.getName(), basePrice, currentPrice);
             stallPricings.add(spr);
         }
 
@@ -72,15 +70,7 @@ public class PricingEngineService {
         BigDecimal taxAmount = subtotal.multiply(BigDecimal.valueOf(0.1)).setScale(2, java.math.RoundingMode.HALF_UP);
         BigDecimal total = subtotal.subtract(discountAmount).add(taxAmount).setScale(2, java.math.RoundingMode.HALF_UP);
 
-        PricingBreakdownResponse response = new PricingBreakdownResponse();
-        response.setStalls(stallPricings);
-        response.setSubtotal(subtotal);
-        response.setDiscountAmount(discountAmount);
-        response.setTaxAmount(taxAmount);
-        response.setTotal(total);
-        response.setCurrency("USD");
-
-        return response;
+        return pricingMapper.toPricingBreakdownResponse(stallPricings, subtotal, discountAmount, taxAmount, total, "USD");
     }
 
     @Transactional(readOnly = true)

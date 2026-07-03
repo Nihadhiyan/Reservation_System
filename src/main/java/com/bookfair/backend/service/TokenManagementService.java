@@ -9,6 +9,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.bookfair.backend.dto.auth.mapper.AuthMapper;
 import com.bookfair.backend.model.RefreshToken;
 import com.bookfair.backend.model.User;
 import com.bookfair.backend.repository.RefreshTokenRepository;
@@ -24,6 +25,7 @@ public class TokenManagementService {
     private final StringRedisTemplate redisTemplate;
     private final RefreshTokenRepository refreshTokenRepository;
     private final TokenBlacklistService tokenBlacklistService;
+    private final AuthMapper authMapper;
 
     @Transactional
     public RefreshToken createAndStoreRefreshToken(User user, String tokenString, long durationMillis,
@@ -31,14 +33,10 @@ public class TokenManagementService {
         requireNonNull(user, "User cannot be null when storing refresh token session");
         requireNonNull(tokenString, "Token string cannot be null when storing refresh token session");
 
-        RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setUser(user);
-        refreshToken.setToken(tokenString);
-        refreshToken.setExpiryDate(Instant.now().plusMillis(durationMillis));
-        refreshToken.setIpAddress(ipAddress);
-        refreshToken.setDeviceInfo(deviceInfo);
+        RefreshToken refreshToken = authMapper.toRefreshToken(
+                user, tokenString, Instant.now().plusMillis(durationMillis), ipAddress, deviceInfo);
 
-        RefreshToken savedToken = refreshTokenRepository.save(refreshToken);
+        RefreshToken savedToken = refreshTokenRepository.save(requireNonNull(refreshToken));
         log.info("Created granular device session [{}] for user [{}] from IP [{}] on device [{}]",
                 savedToken.getId(), user.getId(), ipAddress, deviceInfo);
         return savedToken;

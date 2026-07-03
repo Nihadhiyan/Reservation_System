@@ -1,6 +1,7 @@
 package com.bookfair.backend.service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -40,13 +41,11 @@ public class GenreService {
             throw new BusinessException("Genre name already exists", ErrorCode.BUSINESS_RULE_VIOLATION);
         }
 
-        Genre genre = new Genre();
-        genre.setName(request.getName());
-        genre.setActive(true);
+        Genre genre = genreMapper.toGenre(request);
 
-        Genre saved = genreRepository.save(genre);
+        Genre saved = genreRepository.save(Objects.requireNonNull(genre));
         log.info("Created new genre: {}", saved.getName());
-        
+
         return genreMapper.toGenreResponse(saved);
     }
 

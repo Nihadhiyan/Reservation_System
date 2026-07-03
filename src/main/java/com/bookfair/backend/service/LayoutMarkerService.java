@@ -1,6 +1,7 @@
 package com.bookfair.backend.service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -52,38 +53,29 @@ public class LayoutMarkerService {
                     ErrorCode.BUSINESS_RULE_VIOLATION);
         }
 
-        LayoutMarker marker = new LayoutMarker();
-        marker.setType(request.getType());
-        marker.setLabel(request.getLabel());
-        marker.setPrimaryMarker(request.getPrimaryMarker());
-        marker.setActive(true);
+        LayoutPosition layout = commonMapper.toLayoutPosition(request.getLayout());
 
-        LayoutPosition layout = new LayoutPosition(
-                request.getLayout().getXCoord(),
-                request.getLayout().getYCoord(),
-                request.getLayout().getWidth(),
-                request.getLayout().getHeight());
-        marker.setLayout(layout);
-
+        Venue venue = null;
         if (request.getVenueId() != null) {
-            Venue venue = venueRepository.findById(requireNonNull(request.getVenueId()))
+            venue = venueRepository.findById(requireNonNull(request.getVenueId()))
                     .orElseThrow(() -> new ResourceNotFoundException("Venue not found", ErrorCode.VENUE_NOT_FOUND));
-            marker.setVenue(venue);
         }
 
+        Building building = null;
         if (request.getBuildingId() != null) {
-            Building building = buildingRepository.findById(requireNonNull(request.getBuildingId()))
+            building = buildingRepository.findById(requireNonNull(request.getBuildingId()))
                     .orElseThrow(() -> new ResourceNotFoundException("Building not found", ErrorCode.VENUE_NOT_FOUND));
-            marker.setBuilding(building);
         }
 
+        Hall hall = null;
         if (request.getHallId() != null) {
-            Hall hall = hallRepository.findById(requireNonNull(request.getHallId()))
+            hall = hallRepository.findById(requireNonNull(request.getHallId()))
                     .orElseThrow(() -> new ResourceNotFoundException("Hall not found", ErrorCode.HALL_NOT_FOUND));
-            marker.setHall(hall);
         }
 
-        LayoutMarker saved = layoutMarkerRepository.save(marker);
+        LayoutMarker marker = commonMapper.toLayoutMarker(request, layout, venue, building, hall);
+
+        LayoutMarker saved = layoutMarkerRepository.save(Objects.requireNonNull(marker));
         return commonMapper.toLayoutMarkerDto(saved);
     }
 
@@ -98,11 +90,7 @@ public class LayoutMarkerService {
         marker.setPrimaryMarker(request.getPrimaryMarker());
         marker.setActive(request.getActive());
 
-        LayoutPosition layout = new LayoutPosition(
-                request.getLayout().getXCoord(),
-                request.getLayout().getYCoord(),
-                request.getLayout().getWidth(),
-                request.getLayout().getHeight());
+        LayoutPosition layout = commonMapper.toLayoutPosition(request.getLayout());
         marker.setLayout(layout);
 
         LayoutMarker saved = layoutMarkerRepository.save(marker);

@@ -40,12 +40,9 @@ public class FloorService {
         Building building = buildingRepository.findById(requireNonNull(request.getBuildingId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Building not found", ErrorCode.VENUE_NOT_FOUND));
 
-        Floor floor = new Floor();
-        floor.setLevelName(request.getLevelName());
-        floor.setLevelNumber(request.getLevelNumber());
-        floor.setBuilding(building);
+        Floor floor = floorMapper.toFloor(request, building);
 
-        Floor saved = floorRepository.save(floor);
+        Floor saved = floorRepository.save(requireNonNull(floor));
         return floorMapper.toFloorResponse(saved);
     }
 

@@ -27,6 +27,7 @@ import com.bookfair.backend.exception.BusinessException;
 import com.bookfair.backend.exception.DuplicateResourceException;
 import com.bookfair.backend.exception.ErrorCode;
 import com.bookfair.backend.exception.ResourceNotFoundException;
+import com.bookfair.backend.dto.organization.mapper.OrganizationMapper;
 import com.bookfair.backend.model.Organization;
 import com.bookfair.backend.model.User;
 import com.bookfair.backend.model.OrganizationMember;
@@ -40,8 +41,7 @@ import com.bookfair.backend.model.RefreshToken;
 import com.bookfair.backend.util.RequestUtils;
 import com.bookfair.backend.exception.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.Objects;
-
+import static java.util.Objects.*;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,11 +61,12 @@ public class AuthService {
     private final TokenBlacklistService tokenBlacklistService;
     private final ApplicationEventPublisher eventPublisher;
     private final LoginAttemptService loginAttemptService;
+    private final OrganizationMapper organizationMapper;
 
     @Transactional
     public AuthResponse register(RegisterRequest registerRequest, HttpServletRequest request) {
-        Objects.requireNonNull(registerRequest, "Register request cannot be null");
-        Objects.requireNonNull(request, "HttpServletRequest cannot be null");
+        requireNonNull(registerRequest, "Register request cannot be null");
+        requireNonNull(request, "HttpServletRequest cannot be null");
 
         if (userRepository.existsByUsernameAndActiveTrue(registerRequest.getUsername())) {
             throw new DuplicateResourceException("Username is already taken", ErrorCode.DUPLICATE_USERNAME);
@@ -76,9 +77,10 @@ public class AuthService {
         }
 
         Organization savedOrganization = null;
-
         if (registerRequest.isRegisterAsOrgAdmin()) {
-            if (registerRequest.getOrganizationName() == null || registerRequest.getOrganizationName().isBlank()) {
+
+            if (registerRequest.getOrganizationName() == null
+                    || registerRequest.getOrganizationName().trim().isEmpty()) {
                 throw new BusinessException("Organization name is required for business accounts.",
                         ErrorCode.VALIDATION_ERROR);
             }
@@ -90,15 +92,9 @@ public class AuthService {
                         ErrorCode.BUSINESS_RULE_VIOLATION);
             }
 
-            Organization organization = new Organization();
-            organization.setName(registerRequest.getOrganizationName());
-            organization.setCapabilities(registerRequest.getOrganizationCapabilities());
+            Organization organization = organizationMapper.toOrganizationFromRegisterRequest(registerRequest);
 
-            organization.setContactNumber(registerRequest.getContactNumber());
-            organization.setBillingAddress(registerRequest.getAddress());
-            organization.setContactEmail(registerRequest.getEmail());
-
-            savedOrganization = organizationRepository.save(organization);
+            savedOrganization = organizationRepository.save(requireNonNull(organization));
         }
 
         User user = authMapper.toUserFromRegisterRequest(registerRequest);
@@ -109,11 +105,9 @@ public class AuthService {
         User savedUser = userRepository.save(user);
 
         if (savedOrganization != null) {
-            OrganizationMember member = new OrganizationMember();
-            member.setUser(savedUser);
-            member.setOrganization(savedOrganization);
-            member.setRole(OrganizationRole.ORG_ADMIN);
-            memberRepository.save(member);
+            OrganizationMember member = organizationMapper.toOrganizationMember(savedUser, savedOrganization,
+                    OrganizationRole.ORG_ADMIN);
+            memberRepository.save(requireNonNull(member));
         }
 
         eventPublisher.publishEvent(
@@ -136,8 +130,8 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest loginRequest, HttpServletRequest request) {
-        Objects.requireNonNull(loginRequest, "Login request cannot be null");
-        Objects.requireNonNull(request, "HttpServletRequest cannot be null");
+        requireNonNull(loginRequest, "Login request cannot be null");
+        requireNonNull(request, "HttpServletRequest cannot be null");
 
         String username = loginRequest.getUsername();
 
@@ -176,11 +170,11 @@ public class AuthService {
 
     @Transactional
     public AuthResponse refreshToken(RefreshTokenRequest refreshTokenRequest, HttpServletRequest request) {
-        Objects.requireNonNull(refreshTokenRequest, "RefreshTokenRequest cannot be null");
-        Objects.requireNonNull(request, "HttpServletRequest cannot be null");
+        requireNonNull(refreshTokenRequest, "RefreshTokenRequest cannot be null");
+        requireNonNull(request, "HttpServletRequest cannot be null");
 
         String oldTokenString = refreshTokenRequest.getRefreshToken();
-        Objects.requireNonNull(oldTokenString, "Refresh token string cannot be null");
+        requireNonNull(oldTokenString, "Refresh token string cannot be null");
 
         // Verifying persistent device session against PostgreSQL
         RefreshToken session = tokenManagementService.findByToken(oldTokenString)

@@ -59,13 +59,9 @@ public class PaymentService {
 
         PaymentResponse response = adapter.initializePayment(request);
 
-        Payment payment = new Payment();
-        payment.setReservation(reservation);
-        payment.setAmount(request.getAmount());
-        payment.setStatus(Payment.PaymentStatus.PENDING);
-        payment.setTransactionId(response.getTransactionId());
+        Payment payment = paymentMapper.toPayment(reservation, request.getAmount(), response.getTransactionId());
 
-        Payment saved = paymentRepository.save(payment);
+        Payment saved = paymentRepository.save(requireNonNull(payment));
         log.info("Initialized payment for reservation {} via {}", reservation.getId(), gatewayType);
 
         return paymentMapper.toPaymentResponse(saved);
@@ -93,11 +89,7 @@ public class PaymentService {
                             .orElseThrow(() -> new ResourceNotFoundException("Reservation not found",
                                     ErrorCode.RESERVATION_NOT_FOUND));
 
-                    Payment newPayment = new Payment();
-                    newPayment.setReservation(reservation);
-                    newPayment.setTransactionId(result.transactionId());
-                    newPayment.setAmount(result.amount());
-                    return newPayment;
+                    return paymentMapper.toWebhookPayment(reservation, result.transactionId(), result.amount());
                 });
 
         if (payment.getStatus() == Payment.PaymentStatus.COMPLETED) {

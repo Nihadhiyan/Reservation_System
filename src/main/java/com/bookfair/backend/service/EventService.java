@@ -111,18 +111,9 @@ public class EventService {
                                 ? organizationRepository.findAllById(requireNonNull(request.getPartnerIds()))
                                 : List.of();
 
-                Event event = new Event();
-                event.setName(request.getName());
-                event.setEventType(request.getEventType());
-                event.setStartDateTime(request.getStartDateTime());
-                event.setEndDateTime(request.getEndDateTime());
-                event.setStatus(request.getStatus());
-                event.setOrganizer(organizer);
-                event.setVenue(venue);
-                event.setPartners(partners);
-                event.setActive(true);
+                Event event = eventMapper.toEvent(request, organizer, venue, partners);
 
-                return eventMapper.toEventResponse(eventRepository.save(event));
+                return eventMapper.toEventResponse(eventRepository.save(requireNonNull(event)));
         }
 
         @Transactional

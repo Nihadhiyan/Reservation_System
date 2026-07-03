@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.bookfair.backend.dto.common.Mapper.CommonMapper;
 import com.bookfair.backend.dto.hall.mapper.HallMapper;
 import com.bookfair.backend.dto.hall.request.CreateHallRequest;
 import com.bookfair.backend.dto.hall.request.UpdateHallRequest;
@@ -38,6 +39,7 @@ public class HallService {
         private final HallMapper hallMapper;
         private final StallMapper stallMapper;
         private final LayoutGenerationService layoutGenerationService;
+        private final CommonMapper commonMapper;
 
         @Transactional
         public HallResponse createHall(CreateHallRequest request) {
@@ -46,26 +48,9 @@ public class HallService {
                                 .orElseThrow(() -> new ResourceNotFoundException("Floor not found",
                                                 ErrorCode.VENUE_NOT_FOUND));
 
-                Hall hall = new Hall();
-                hall.setName(request.getName());
-                hall.setSpaceCategory(request.getSpaceCategory());
-                hall.setHallType(request.getHallType());
-                hall.setBlueprintImageUrl(request.getBlueprintImageUrl());
-                hall.setSquareFootage(request.getSquareFootage());
-                hall.setMaxStalls(request.getMaxStalls());
-                hall.setWifiAvailable(request.getWifiAvailable());
-                hall.setAirConditioned(request.getAirConditioned());
-                hall.setActive(true);
+                Hall hall = hallMapper.toHall(request, floor);
 
-                LayoutPosition layout = new LayoutPosition(
-                                request.getLayout().getXCoord(),
-                                request.getLayout().getYCoord(),
-                                request.getLayout().getWidth(),
-                                request.getLayout().getHeight());
-                hall.setLayout(layout);
-                hall.setFloor(floor);
-
-                Hall saved = hallRepository.save(hall);
+                Hall saved = hallRepository.save(requireNonNull(hall));
                 return hallMapper.toHallResponse(saved);
         }
 
@@ -108,11 +93,7 @@ public class HallService {
                 hall.setAirConditioned(request.getAirConditioned());
                 hall.setActive(request.getActive());
 
-                LayoutPosition layout = new LayoutPosition(
-                                request.getLayout().getXCoord(),
-                                request.getLayout().getYCoord(),
-                                request.getLayout().getWidth(),
-                                request.getLayout().getHeight());
+                LayoutPosition layout = commonMapper.toLayoutPosition(request.getLayout());
                 hall.setLayout(layout);
                 hall.setFloor(floor);
 

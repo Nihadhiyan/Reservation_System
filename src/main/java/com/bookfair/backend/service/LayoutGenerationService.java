@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.bookfair.backend.dto.common.LayoutPositionDto;
+import com.bookfair.backend.dto.common.Mapper.CommonMapper;
+import com.bookfair.backend.dto.stall.mapper.StallMapper;
 import com.bookfair.backend.exception.ErrorCode;
 import com.bookfair.backend.exception.ResourceNotFoundException;
 import com.bookfair.backend.model.Hall;
@@ -27,6 +29,8 @@ public class LayoutGenerationService {
 
     private final HallRepository hallRepository;
     private final StallRepository stallRepository;
+    private final CommonMapper commonMapper;
+    private final StallMapper stallMapper;
 
     @Transactional
     public List<Stall> autoGenerateStallGrid(UUID hallId, int rows, int columns, int stallWidth, int stallLength,
@@ -43,16 +47,13 @@ public class LayoutGenerationService {
         for (int r = 0; r < rows; r++) {
             int currentX = startX;
             for (int c = 0; c < columns; c++) {
-                Stall stall = new Stall();
-                stall.setHall(hall);
-                stall.setName(String.format("%s-%d",
+                String name = String.format("%s-%d",
                         hall.getName().substring(0, Math.min(3, hall.getName().length())).toUpperCase(),
-                        stallCounter++));
-                stall.setSquareFootage((double) (stallWidth * stallLength));
-                stall.setActive(true);
+                        stallCounter++);
+                Double sqFootage = (double) (stallWidth * stallLength);
+                LayoutPosition layout = commonMapper.toLayoutPositionFromCoords(currentX, currentY, stallWidth, stallLength);
 
-                LayoutPosition layout = new LayoutPosition(currentX, currentY, stallWidth, stallLength);
-                stall.setLayout(layout);
+                Stall stall = stallMapper.toGeneratedStall(hall, name, sqFootage, layout);
 
                 newStalls.add(stall);
 
@@ -71,11 +72,7 @@ public class LayoutGenerationService {
         Stall stall = stallRepository.findById(requireNonNull(stallId))
                 .orElseThrow(() -> new ResourceNotFoundException("Stall not found", ErrorCode.STALL_NOT_FOUND));
 
-        LayoutPosition newLayout = new LayoutPosition(
-                layoutPositionDto.getXCoord(),
-                layoutPositionDto.getYCoord(),
-                layoutPositionDto.getWidth(),
-                layoutPositionDto.getHeight());
+        LayoutPosition newLayout = commonMapper.toLayoutPosition(layoutPositionDto);
         stall.setLayout(newLayout);
 
         log.info("Updated coordinates for stall {}", stallId);

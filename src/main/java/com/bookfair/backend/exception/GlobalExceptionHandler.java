@@ -14,7 +14,6 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 
 import com.bookfair.backend.dto.common.ErrorResponse;
 
-import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 
@@ -83,7 +82,7 @@ public class GlobalExceptionHandler {
 
                 List<String> errors = ex.getConstraintViolations()
                                 .stream()
-                                .map(ConstraintViolation::getMessage)
+                                .map(cs -> cs.getMessage())
                                 .toList();
 
                 log.warn("Constraint validation failed: {}", errors);
