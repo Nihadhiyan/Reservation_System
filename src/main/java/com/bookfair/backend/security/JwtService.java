@@ -10,7 +10,7 @@ import java.util.function.Function;
 
 import javax.crypto.SecretKey;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.bookfair.backend.config.AppProperties;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
@@ -31,8 +31,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class JwtService {
 
-    @Value("${app.jwtSecret:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
-    private String secretKey;
+    private final AppProperties appProperties;
 
     private static final long ACCESS_TOKEN_EXPIRATION_TIME = 1000 * 60 * 60;
 
@@ -102,12 +101,12 @@ public class JwtService {
     }
 
     private SecretKey getKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        byte[] keyBytes = Decoders.BASE64.decode(appProperties.getJwtSecret());
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public UUID extractUserId(String token) {
-        return UUID.fromString(extractClaim(token, Claims::getSubject));
+        return UUID.fromString(extractClaim(token, claims -> claims.getSubject()));
     }
 
     public Instant extractIssuedAt(String token) {
@@ -115,7 +114,7 @@ public class JwtService {
     }
 
     public String extractJti(String token) {
-        return extractClaim(token, Claims::getId);
+        return extractClaim(token, claims -> claims.getId());
     }
 
     public String extractSystemRole(String token) {

@@ -5,8 +5,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import com.bookfair.backend.config.StripeProperties;
 
 import com.bookfair.backend.dto.payment.request.CreatePaymentRequest;
 import com.bookfair.backend.dto.payment.response.PaymentResponse;
@@ -25,18 +26,15 @@ import com.stripe.param.checkout.SessionCreateParams.LineItem.PriceData;
 import com.stripe.param.checkout.SessionCreateParams.LineItem.PriceData.ProductData;
 
 @Component
+@RequiredArgsConstructor
 public class StripePaymentGateway implements PaymentGateway {
 
-    @Value("${stripe.api.key}")
-    private String stripeSecretKey;
-
-    @Value("${stripe.webhook.secret}")
-    private String stripeWebhookSecret;
+    private final StripeProperties stripeProperties;
 
     @Override
     public PaymentResponse initializePayment(CreatePaymentRequest request) {
         try {
-            Stripe.apiKey = stripeSecretKey;
+            Stripe.apiKey = stripeProperties.getApi().getKey();
 
             long amountInCents = request.getAmount().multiply(BigDecimal.valueOf(100)).longValue();
             String productName = "Reservation ID: " + request.getReservationId();
@@ -82,7 +80,7 @@ public class StripePaymentGateway implements PaymentGateway {
     @Override
     public PaymentWebhookResult processWebhook(String payload, String signatureHeader) {
         try {
-            Event event = Webhook.constructEvent(payload, signatureHeader, stripeWebhookSecret);
+            Event event = Webhook.constructEvent(payload, signatureHeader, stripeProperties.getWebhook().getSecret());
 
             if ("checkout.session.completed".equals(event.getType())) {
                 EventDataObjectDeserializer dataObjectDeserializer = event.getDataObjectDeserializer();

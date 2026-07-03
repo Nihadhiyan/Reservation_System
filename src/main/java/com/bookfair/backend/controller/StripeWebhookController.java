@@ -5,7 +5,7 @@ import com.stripe.exception.SignatureVerificationException;
 import com.stripe.net.Webhook;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import com.bookfair.backend.config.StripeProperties;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,8 +22,7 @@ public class StripeWebhookController {
 
     private final PaymentService paymentService;
 
-    @Value("${stripe.webhook.secret}")
-    private String endpointSecret;
+    private final StripeProperties stripeProperties;
 
     @PostMapping("/webhook")
     public ResponseEntity<String> handleStripeWebhook(
@@ -34,7 +33,7 @@ public class StripeWebhookController {
             // Verifying the signature and construct the event
             // This throws an exception if the payload was altered or signature is invalid
             // need to hande it
-            Webhook.constructEvent(payload, sigHeader, endpointSecret);
+            Webhook.constructEvent(payload, sigHeader, stripeProperties.getWebhook().getSecret());
 
             // Passing the validated payload to your PaymentService logic
             paymentService.processWebhook(payload, sigHeader, "STRIPE");
