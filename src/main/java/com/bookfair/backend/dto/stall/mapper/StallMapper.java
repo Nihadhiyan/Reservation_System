@@ -23,4 +23,13 @@ public interface StallMapper {
     Stall updateStallFromStallRequest(UpdateStallRequest request, @MappingTarget Stall stall);
 
     StallLayoutResponse toStallLayoutResponse(Stall stall);
+
+    @org.mapstruct.Mapping(target = "id", ignore = true)
+    @org.mapstruct.Mapping(target = "active", constant = "true")
+    @org.mapstruct.Mapping(target = "hall", source = "hall")
+    @org.mapstruct.Mapping(target = "name", source = "name")
+    @org.mapstruct.Mapping(target = "squareFootage", source = "squareFootage")
+    @org.mapstruct.Mapping(target = "layout", source = "layout")
+    Stall toGeneratedStall(com.bookfair.backend.model.Hall hall, String name, Double squareFootage, com.bookfair.backend.model.LayoutPosition layout);
 }
+

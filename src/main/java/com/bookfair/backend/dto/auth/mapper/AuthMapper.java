@@ -19,4 +19,13 @@ public interface AuthMapper {
     @Mapping(target = "active", constant = "true") // Automatically set active to true
     @Mapping(target = "emailVerified", constant = "false") // Automatically set verified to false
     User toUserFromRegisterRequest(RegisterRequest registerRequest);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "user", source = "user")
+    @Mapping(target = "token", source = "tokenString")
+    @Mapping(target = "expiryDate", source = "expiryDate")
+    @Mapping(target = "ipAddress", source = "ipAddress")
+    @Mapping(target = "deviceInfo", source = "deviceInfo")
+    com.bookfair.backend.model.RefreshToken toRefreshToken(User user, String tokenString, java.time.Instant expiryDate, String ipAddress, String deviceInfo);
 }
+

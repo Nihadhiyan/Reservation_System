@@ -14,6 +14,8 @@ public interface GenreMapper {
     
     GenreResponse toGenreResponse(Genre genre);
 
+    @org.mapstruct.Mapping(target = "id", ignore = true)
+    @org.mapstruct.Mapping(target = "active", constant = "true")
     Genre toGenre(CreateGenreRequest request);
 
     void updateGenreFromRequest(UpdateGenreRequest request, @MappingTarget Genre genre);

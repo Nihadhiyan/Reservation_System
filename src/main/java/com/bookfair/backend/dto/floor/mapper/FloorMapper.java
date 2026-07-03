@@ -20,4 +20,11 @@ public interface FloorMapper {
     Floor toFloorFromCreateFloorRequest(CreateFloorRequest request);
 
     Floor UpdateFloorFromFloorRequest(UpdateFloorRequest request, @MappingTarget Floor floor);
+
+    @org.mapstruct.Mapping(target = "id", ignore = true)
+    @org.mapstruct.Mapping(target = "levelName", source = "request.levelName")
+    @org.mapstruct.Mapping(target = "levelNumber", source = "request.levelNumber")
+    @org.mapstruct.Mapping(target = "building", source = "building")
+    Floor toFloor(CreateFloorRequest request, com.bookfair.backend.model.Building building);
 }
+
