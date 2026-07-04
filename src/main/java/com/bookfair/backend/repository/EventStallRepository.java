@@ -27,7 +27,7 @@ public interface EventStallRepository extends JpaRepository<EventStall, UUID> {
 
     List<EventStall> findByEvent(Event event);
 
-    @EntityGraph(attributePaths = {"stall"})
+    @EntityGraph(attributePaths = { "stall" })
     @Query("SELECT es FROM EventStall es WHERE es.event.id = :eventId")
     List<EventStall> findAllByEventIdWithStallData(@Param("eventId") UUID eventId);
 
@@ -39,6 +39,6 @@ public interface EventStallRepository extends JpaRepository<EventStall, UUID> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints(@QueryHint(name = "jakarta.persistence.lock.timeout", value = "3000"))
-    @Query("SELECT es FROM EventStall es WHERE es.id IN :ids")
+    @Query("SELECT es FROM EventStall es WHERE es.id IN :ids AND es.active = true ORDER BY es.id ASC")
     List<EventStall> findAllForUpdate(@Param("ids") List<UUID> ids);
 }

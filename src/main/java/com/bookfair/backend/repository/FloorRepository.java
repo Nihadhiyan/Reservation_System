@@ -12,4 +12,5 @@ import com.bookfair.backend.model.Floor;
 public interface FloorRepository extends JpaRepository<Floor, UUID> {
     List<Floor> findByBuildingId(UUID buildingId);
     List<Floor> findByBuildingIdOrderByLevelNumberAsc(UUID buildingId);
+    List<Floor> findByBuildingIdAndActiveTrue(UUID buildingId);
 }

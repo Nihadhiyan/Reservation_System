@@ -25,4 +25,6 @@ public interface StallRepository extends JpaRepository<Stall, UUID> {
     long countByActiveTrue();
 
     long countByHallId(UUID hallId);
+
+    boolean existsByHallIdAndName(UUID hallId, String name);
 }
