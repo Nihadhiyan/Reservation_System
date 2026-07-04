@@ -25,6 +25,10 @@ public interface EventStallRepository extends JpaRepository<EventStall, UUID> {
 
     List<EventStall> findByEventId(UUID eventId);
 
+    List<EventStall> findByEventIdAndActiveTrue(UUID eventId);
+
+    List<EventStall> findByStallIdAndActiveTrue(UUID stallId);
+
     List<EventStall> findByEvent(Event event);
 
     @EntityGraph(attributePaths = { "stall" })

@@ -20,6 +20,8 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
 
     List<Event> findByOrganizerId(UUID orgId);
 
+    List<Event> findByVenueIdAndActiveTrue(UUID venueId);
+
     List<Event> findByPartners_Id(UUID orgId);
 
     List<Event> findByStartDateTimeBeforeAndEndDateTimeAfter(
