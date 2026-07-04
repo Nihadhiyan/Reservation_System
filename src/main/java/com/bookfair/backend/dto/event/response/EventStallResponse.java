@@ -1,5 +1,6 @@
 package com.bookfair.backend.dto.event.response;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
@@ -9,11 +10,12 @@ import lombok.Setter;
 
 import com.bookfair.backend.dto.common.LayoutPositionDto;
 
+// Implements Serializable for Redis caching compatibility
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class EventStallResponse {
+public class EventStallResponse implements Serializable {
     private UUID id;
     private UUID eventId;
     private UUID stallId;

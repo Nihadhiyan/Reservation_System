@@ -8,12 +8,16 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 @Getter
 @Setter
+@ToString
+@EqualsAndHashCode
 @AllArgsConstructor
 @NoArgsConstructor
 public class UpdateOrganizationRequest {
@@ -22,13 +26,19 @@ public class UpdateOrganizationRequest {
 
     @NotBlank(message = "Contact number is required")
     @Pattern(regexp = "^\\+?[1-9]\\d{9,14}$", message = "Invalid contact number format")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private String contactNumber;
 
     @Email(message = "Invalid email format")
     @NotBlank(message = "Email is required")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private String contactEmail;
 
     @NotBlank(message = "Address is required")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private String billingAddress;
 
     @NotEmpty(message = "At least one capability is required")

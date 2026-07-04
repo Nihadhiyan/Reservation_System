@@ -1,5 +1,6 @@
 package com.bookfair.backend.dto.user.response;
 
+import java.io.Serializable;
 import java.util.UUID;
 
 import com.bookfair.backend.dto.common.SimpleOrganizationDto;
@@ -9,11 +10,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+// Implements Serializable for Redis caching compatibility
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserResponse {
+public class UserResponse implements Serializable {
     private UUID id;
     private String username;
     private String email;

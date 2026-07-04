@@ -8,11 +8,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.io.Serializable;
+
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class PricingRuleResponse {
+public class PricingRuleResponse implements Serializable {
     private UUID id;
     private String name;
     private String description;
