@@ -52,15 +52,26 @@ public class EventStallService {
 
                 UUID stallVenueId = stall.getHall().getFloor().getBuilding().getVenue().getId();
                 if (!stallVenueId.equals(event.getVenue().getId())) {
-                        throw new BusinessException("Relational integrity violation: Stall does not belong to the Event's Venue.",
+                        throw new BusinessException(
+                                        "Relational integrity violation: Stall does not belong to the Event's Venue.",
                                         ErrorCode.BUSINESS_RULE_VIOLATION);
                 }
 
-                eventStallRepository.findByEventIdAndStallId(request.getEventId(), request.getStallId())
-                                .ifPresent(existing -> {
-                                        throw new BusinessException("Stall is already assigned to this event.",
-                                                        ErrorCode.BUSINESS_RULE_VIOLATION);
-                                });
+                java.util.Optional<EventStall> existingOpt = eventStallRepository
+                                .findByEventIdAndStallId(request.getEventId(), request.getStallId());
+                if (existingOpt.isPresent()) {
+                        EventStall existing = existingOpt.get();
+                        if (Boolean.TRUE.equals(existing.getActive())) {
+                                throw new BusinessException("Stall is already assigned to this event.",
+                                                ErrorCode.BUSINESS_RULE_VIOLATION);
+                        } else {
+                                existing.setActive(true);
+                                existing.setStatus(EventStall.AvailabilityStatus.AVAILABLE);
+                                EventStall saved = eventStallRepository.save(existing);
+                                eventPublisher.publishEvent(new EventStallUpdatedEvent(request.getEventId()));
+                                return eventMapper.toEventStallResponse(saved);
+                        }
+                }
 
                 EventStall eventStall = eventMapper.toEventStall(request, event, stall);
 
@@ -86,9 +97,19 @@ public class EventStallService {
                                 .orElseThrow(() -> new ResourceNotFoundException("Event stall not found",
                                                 ErrorCode.EVENT_NOT_FOUND));
 
+                EventStall.AvailabilityStatus newStatus = EventStall.AvailabilityStatus
+                                .valueOf(request.getStatus().toUpperCase());
+                if (newStatus == EventStall.AvailabilityStatus.AVAILABLE &&
+                                (eventStall.getStatus() == EventStall.AvailabilityStatus.BOOKED
+                                                || eventStall.getStatus() == EventStall.AvailabilityStatus.BLOCKED)) {
+                        throw new BusinessException(
+                                        "Cannot manually change status to AVAILABLE while stall is currently booked or blocked by an active reservation.",
+                                        ErrorCode.BUSINESS_RULE_VIOLATION);
+                }
+
                 eventStall.setBasePrice(request.getBasePrice());
                 eventStall.setManualOverridePrice(request.getManualOverridePrice());
-                eventStall.setStatus(EventStall.AvailabilityStatus.valueOf(request.getStatus().toUpperCase()));
+                eventStall.setStatus(newStatus);
 
                 EventStall saved = eventStallRepository.save(eventStall);
                 // Publish event to trigger AFTER_COMMIT cache eviction
@@ -102,8 +123,9 @@ public class EventStallService {
                                 .orElseThrow(() -> new ResourceNotFoundException("Event stall not found",
                                                 ErrorCode.EVENT_NOT_FOUND));
 
-                if (eventStall.getStatus() == EventStall.AvailabilityStatus.BOOKED) {
-                        throw new BusinessException("Cannot remove a booked stall from the event.",
+                if (eventStall.getStatus() == EventStall.AvailabilityStatus.BOOKED
+                                || eventStall.getStatus() == EventStall.AvailabilityStatus.BLOCKED) {
+                        throw new BusinessException("Cannot remove a booked or blocked stall from the event.",
                                         ErrorCode.BUSINESS_RULE_VIOLATION);
                 }
 
@@ -122,7 +144,8 @@ public class EventStallService {
                 }
 
                 return eventStallRepository.findAllByEventIdWithStallData(eventId).stream()
-                                .filter(es -> es != null && Boolean.TRUE.equals(es.getActive()))
+                                .filter(es -> es != null && Boolean.TRUE.equals(es.getActive())
+                                                && Boolean.TRUE.equals(es.getStall().getActive()))
                                 .map(eventMapper::toEventStallResponse)
                                 .collect(Collectors.toList());
         }
@@ -139,24 +162,35 @@ public class EventStallService {
 
                 UUID hallVenueId = hall.getFloor().getBuilding().getVenue().getId();
                 if (!hallVenueId.equals(event.getVenue().getId())) {
-                        throw new BusinessException("Relational integrity violation: Hall does not belong to the Event's Venue.",
+                        throw new BusinessException(
+                                        "Relational integrity violation: Hall does not belong to the Event's Venue.",
                                         ErrorCode.BUSINESS_RULE_VIOLATION);
                 }
 
                 List<Stall> stalls = stallRepository.findByHallIdAndActiveTrue(hallId);
                 List<EventStall> existingEventStalls = eventStallRepository.findByEventId(eventId);
-                java.util.Set<UUID> alreadyAssignedStallIds = existingEventStalls.stream()
-                                .map(es -> es.getStall().getId())
-                                .collect(Collectors.toSet());
+                java.util.Map<UUID, EventStall> existingByStallId = existingEventStalls.stream()
+                                .collect(Collectors.toMap(es -> es.getStall().getId(), es -> es));
 
-                List<EventStall> newEventStalls = stalls.stream()
-                                .filter(stall -> !alreadyAssignedStallIds.contains(stall.getId()))
-                                .map(stall -> eventMapper.toCopiedEventStall(event, stall))
-                                .collect(Collectors.toList());
+                List<EventStall> stallsToSave = new java.util.ArrayList<>();
+                for (Stall stall : stalls) {
+                        EventStall existing = existingByStallId.get(stall.getId());
+                        if (existing != null) {
+                                if (Boolean.FALSE.equals(existing.getActive())) {
+                                        existing.setActive(true);
+                                        existing.setStatus(EventStall.AvailabilityStatus.AVAILABLE);
+                                        stallsToSave.add(existing);
+                                }
+                        } else {
+                                stallsToSave.add(eventMapper.toCopiedEventStall(event, stall));
+                        }
+                }
 
-                List<EventStall> savedStalls = eventStallRepository.saveAll(requireNonNull(newEventStalls));
+                eventStallRepository.saveAll(requireNonNull(stallsToSave));
                 // Publish event to trigger AFTER_COMMIT cache eviction
                 eventPublisher.publishEvent(new EventStallUpdatedEvent(eventId));
-                return savedStalls.stream().map(eventMapper::toEventStallResponse).collect(Collectors.toList());
+                return eventStallRepository.findByEventIdAndActiveTrue(eventId).stream()
+                                .map(eventMapper::toEventStallResponse)
+                                .collect(Collectors.toList());
         }
 }
