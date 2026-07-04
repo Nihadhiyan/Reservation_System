@@ -19,9 +19,11 @@ import com.bookfair.backend.dto.stall.mapper.StallMapper;
 import com.bookfair.backend.exception.ErrorCode;
 import com.bookfair.backend.exception.ResourceNotFoundException;
 import com.bookfair.backend.model.Hall;
+import com.bookfair.backend.model.LayoutMarker;
 import com.bookfair.backend.model.LayoutPosition;
 import com.bookfair.backend.model.Stall;
 import com.bookfair.backend.repository.HallRepository;
+import com.bookfair.backend.repository.LayoutMarkerRepository;
 import com.bookfair.backend.repository.StallRepository;
 import static java.util.Objects.requireNonNull;
 
@@ -35,6 +37,7 @@ public class LayoutGenerationService {
 
     private final HallRepository hallRepository;
     private final StallRepository stallRepository;
+    private final LayoutMarkerRepository layoutMarkerRepository;
     private final CommonMapper commonMapper;
     private final StallMapper stallMapper;
     private final ApplicationEventPublisher eventPublisher;
@@ -91,6 +94,14 @@ public class LayoutGenerationService {
                 Double sqFootage = (double) (stallWidth * stallLength);
                 LayoutPosition layout = commonMapper.toLayoutPositionFromCoords(currentX, currentY, stallWidth, stallLength);
 
+                validateSpatialConstraints(hall, layout, null);
+                for (Stall newStall : newStalls) {
+                    if (newStall.getLayout() != null && rectanglesOverlap(layout.getXCoord(), layout.getYCoord(), layout.getWidth(), layout.getHeight(),
+                            newStall.getLayout().getXCoord(), newStall.getLayout().getYCoord(), newStall.getLayout().getWidth(), newStall.getLayout().getHeight())) {
+                        throw new IllegalStateException("Generated stall spatial layout overlaps with another generated stall.");
+                    }
+                }
+
                 Stall stall = stallMapper.toGeneratedStall(hall, name, sqFootage, layout);
                 newStalls.add(stall);
 
@@ -113,6 +124,7 @@ public class LayoutGenerationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Stall not found", ErrorCode.STALL_NOT_FOUND));
 
         LayoutPosition newLayout = commonMapper.toLayoutPosition(layoutPositionDto);
+        validateSpatialConstraints(stall.getHall(), newLayout, stallId);
         stall.setLayout(newLayout);
 
         log.info("Updated coordinates for stall {}", stallId);
@@ -120,6 +132,51 @@ public class LayoutGenerationService {
         // Publish event to trigger AFTER_COMMIT cache eviction
         eventPublisher.publishEvent(new LayoutUpdatedEvent(savedStall.getHall().getId()));
         return savedStall;
+    }
+
+    public void validateSpatialConstraints(Hall hall, LayoutPosition newLayout, UUID currentStallId) {
+        if (newLayout == null || newLayout.getXCoord() == null || newLayout.getYCoord() == null
+                || newLayout.getWidth() == null || newLayout.getHeight() == null) {
+            throw new IllegalArgumentException("Layout position coordinates and dimensions must not be null");
+        }
+        if (newLayout.getXCoord() < 0 || newLayout.getYCoord() < 0 || newLayout.getWidth() <= 0 || newLayout.getHeight() <= 0) {
+            throw new IllegalArgumentException("Layout coordinates must be non-negative and dimensions must be positive");
+        }
+        if (hall != null && hall.getLayout() != null && hall.getLayout().getWidth() != null && hall.getLayout().getHeight() != null) {
+            if (newLayout.getXCoord() + newLayout.getWidth() > hall.getLayout().getWidth()
+                    || newLayout.getYCoord() + newLayout.getHeight() > hall.getLayout().getHeight()) {
+                throw new IllegalStateException("Stall layout exceeds parent Hall layout dimensions.");
+            }
+        }
+        if (hall != null) {
+            List<Stall> existingStalls = stallRepository.findByHallIdAndActiveTrue(hall.getId());
+            for (Stall existing : existingStalls) {
+                if (currentStallId != null && existing.getId().equals(currentStallId)) {
+                    continue;
+                }
+                if (existing.getLayout() != null && existing.getLayout().getXCoord() != null && existing.getLayout().getYCoord() != null
+                        && existing.getLayout().getWidth() != null && existing.getLayout().getHeight() != null) {
+                    if (rectanglesOverlap(newLayout.getXCoord(), newLayout.getYCoord(), newLayout.getWidth(), newLayout.getHeight(),
+                            existing.getLayout().getXCoord(), existing.getLayout().getYCoord(), existing.getLayout().getWidth(), existing.getLayout().getHeight())) {
+                        throw new IllegalStateException("Stall spatial layout overlaps with existing stall: " + existing.getName());
+                    }
+                }
+            }
+            List<LayoutMarker> existingMarkers = layoutMarkerRepository.findByHallIdAndActiveTrue(hall.getId());
+            for (LayoutMarker marker : existingMarkers) {
+                if (marker.getLayout() != null && marker.getLayout().getXCoord() != null && marker.getLayout().getYCoord() != null
+                        && marker.getLayout().getWidth() != null && marker.getLayout().getHeight() != null) {
+                    if (rectanglesOverlap(newLayout.getXCoord(), newLayout.getYCoord(), newLayout.getWidth(), newLayout.getHeight(),
+                            marker.getLayout().getXCoord(), marker.getLayout().getYCoord(), marker.getLayout().getWidth(), marker.getLayout().getHeight())) {
+                        throw new IllegalStateException("Stall spatial layout overlaps with existing layout marker: " + marker.getLabel());
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean rectanglesOverlap(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2) {
+        return x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
     }
 
     // Cache physical stall layout lists by hall ID
