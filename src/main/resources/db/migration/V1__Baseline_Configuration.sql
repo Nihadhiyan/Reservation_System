@@ -1,0 +1,23 @@
+-- ============================================================================
+-- Flyway Schema Migration Baseline: V1__Baseline_Configuration.sql
+-- ============================================================================
+-- 
+-- IMPORTANT ARCHITECTURAL RULE & DIRECTIVE:
+-- This file serves as the Flyway migration baseline for the BookFair Reservation System.
+-- 
+-- In production environments, Hibernate auto-update (`ddl-auto=update`) is strictly disabled
+-- (`spring.jpa.hibernate.ddl-auto=validate`). All schema creation, modifications, and
+-- explicit database constraints MUST be tracked and versioned through Flyway migration scripts.
+--
+-- Future explicit database constraints must be added via subsequent Flyway migration scripts (e.g., V2__, V3__), specifically:
+--   1. UNIQUE constraints on natural keys and business identifiers (e.g., venue names, user emails).
+--   2. CHECK constraints enforcing domain boundaries and valid enum states.
+--   3. FOREIGN KEY constraints guaranteeing hierarchical and relational integrity across parent-child tables.
+--   4. Indexing strategies for high-performance query execution and deadlock prevention.
+--
+-- Note: When `spring.flyway.baseline-on-migrate=true` is enabled against an existing database,
+-- Flyway will baseline at V1 and apply subsequent migrations without re-running this baseline script.
+-- ============================================================================
+
+-- Baseline timestamp: 2026-07-04
+-- Schema version tracking initialized.
