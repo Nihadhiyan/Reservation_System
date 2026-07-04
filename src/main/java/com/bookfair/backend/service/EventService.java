@@ -23,6 +23,7 @@ import com.bookfair.backend.exception.ForbiddenException;
 import com.bookfair.backend.exception.ResourceNotFoundException;
 import com.bookfair.backend.model.Event;
 import com.bookfair.backend.model.Event.EventStatus;
+import com.bookfair.backend.model.EventStall;
 import com.bookfair.backend.model.Organization;
 import com.bookfair.backend.model.User;
 import com.bookfair.backend.model.User.SystemRole;
@@ -169,6 +170,19 @@ public class EventService {
                         }
                 }
 
+                if (!event.getVenue().getId().equals(venue.getId())) {
+                        List<EventStall> esList = eventStallRepository.findByEventIdAndActiveTrue(event.getId());
+                        if (!esList.isEmpty()) {
+                                throw new BusinessException("Cannot change Event Venue because stalls from the original Venue are currently assigned to this Event.",
+                                                ErrorCode.BUSINESS_RULE_VIOLATION);
+                        }
+                }
+
+                boolean oldActive = Boolean.TRUE.equals(event.getActive());
+                if (request.getActive() != null && !request.getActive() && oldActive) {
+                        validateNoActiveBookingsForEvent(event.getId(), event.getName());
+                }
+
                 List<Organization> partners = (request.getPartnerIds() != null && !request.getPartnerIds().isEmpty())
                                 ? organizationRepository.findAllById(requireNonNull(request.getPartnerIds()))
                                 : List.of();
@@ -187,6 +201,9 @@ public class EventService {
 
                 // Publish event to trigger AFTER_COMMIT cache eviction
                 eventPublisher.publishEvent(new EventUpdatedEvent(updatedEvent.getId()));
+                if (oldActive && !Boolean.TRUE.equals(updatedEvent.getActive())) {
+                        eventPublisher.publishEvent(new com.bookfair.backend.event.hierarchy.EventDeactivatedEvent(updatedEvent.getId()));
+                }
 
                 return eventMapper.toEventResponse(updatedEvent);
         }
@@ -212,11 +229,24 @@ public class EventService {
                         }
                 }
 
+                validateNoActiveBookingsForEvent(event.getId(), event.getName());
+
                 event.setActive(false);
                 eventRepository.save(event);
 
                 // Publish event to trigger AFTER_COMMIT cache eviction
                 eventPublisher.publishEvent(new EventUpdatedEvent(event.getId()));
+                eventPublisher.publishEvent(new com.bookfair.backend.event.hierarchy.EventDeactivatedEvent(event.getId()));
+        }
+
+        private void validateNoActiveBookingsForEvent(UUID eventId, String eventName) {
+                List<EventStall> esList = eventStallRepository.findByEventIdAndActiveTrue(eventId);
+                for (EventStall es : esList) {
+                        if (es.getStatus() == EventStall.AvailabilityStatus.BOOKED || es.getStatus() == EventStall.AvailabilityStatus.BLOCKED) {
+                                throw new BusinessException("Cannot deactivate Event " + eventName + " because stall " + es.getStall().getName() + " is currently booked or blocked.",
+                                                ErrorCode.BUSINESS_RULE_VIOLATION);
+                        }
+                }
         }
 
         @Transactional

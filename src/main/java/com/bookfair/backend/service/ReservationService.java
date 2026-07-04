@@ -163,7 +163,7 @@ public class ReservationService {
         @Transactional
         public void confirmReservation(UUID reservationId) {
                 Reservation reservation = reservationRepository
-                                .findByIdAndStatus(requireNonNull(reservationId), ReservationStatus.PENDING)
+                                .findByIdAndStatusForUpdate(requireNonNull(reservationId), ReservationStatus.PENDING)
                                 .orElseThrow(
                                                 () -> new ResourceNotFoundException("Reservation not found",
                                                                 ErrorCode.RESERVATION_NOT_FOUND));

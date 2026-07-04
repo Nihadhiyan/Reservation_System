@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -16,17 +17,27 @@ import com.bookfair.backend.dto.venue.request.CreateVenueRequest;
 import com.bookfair.backend.dto.venue.request.UpdateVenueRequest;
 import com.bookfair.backend.dto.venue.response.VenueMapResponse;
 import com.bookfair.backend.dto.venue.response.VenueResponse;
+import com.bookfair.backend.event.cache.VenueUpdatedEvent;
+import com.bookfair.backend.event.hierarchy.VenueDeactivatedEvent;
+import com.bookfair.backend.exception.BusinessException;
 import com.bookfair.backend.exception.DuplicateResourceException;
 import com.bookfair.backend.exception.ErrorCode;
 import com.bookfair.backend.exception.ResourceNotFoundException;
+import com.bookfair.backend.model.Building;
+import com.bookfair.backend.model.EventStall;
+import com.bookfair.backend.model.EventStall.AvailabilityStatus;
+import com.bookfair.backend.model.Floor;
+import com.bookfair.backend.model.Hall;
 import com.bookfair.backend.model.Organization;
+import com.bookfair.backend.model.Stall;
 import com.bookfair.backend.model.Venue;
+import com.bookfair.backend.repository.BuildingRepository;
+import com.bookfair.backend.repository.EventStallRepository;
+import com.bookfair.backend.repository.FloorRepository;
+import com.bookfair.backend.repository.HallRepository;
 import com.bookfair.backend.repository.OrganizationRepository;
+import com.bookfair.backend.repository.StallRepository;
 import com.bookfair.backend.repository.VenueRepository;
-import org.springframework.context.ApplicationEventPublisher;
-import com.bookfair.backend.event.hierarchy.VenueDeactivatedEvent;
-import com.bookfair.backend.event.cache.VenueUpdatedEvent;
-
 import static java.util.Objects.requireNonNull;
 
 import lombok.RequiredArgsConstructor;
@@ -36,6 +47,11 @@ import lombok.RequiredArgsConstructor;
 public class VenueService {
         private final VenueRepository venueRepository;
         private final OrganizationRepository organizationRepository;
+        private final BuildingRepository buildingRepository;
+        private final FloorRepository floorRepository;
+        private final HallRepository hallRepository;
+        private final StallRepository stallRepository;
+        private final EventStallRepository eventStallRepository;
         private final VenueMapper venueMapper;
         private final BuildingMapper buildingMapper;
         private final ApplicationEventPublisher eventPublisher;
@@ -118,6 +134,11 @@ public class VenueService {
                                         ErrorCode.BUSINESS_RULE_VIOLATION);
                 }
 
+                boolean oldActive = Boolean.TRUE.equals(venue.getActive());
+                if (request.getActive() != null && !request.getActive() && oldActive) {
+                        validateNoActiveBookingsForVenue(venue.getId(), venue.getName());
+                }
+
                 Organization owner = organizationRepository.findById(requireNonNull(request.getOwnerOrganizationId()))
                                 .orElseThrow(
                                                 () -> new ResourceNotFoundException("Owner org not found",
@@ -135,6 +156,9 @@ public class VenueService {
 
                 Venue saved = venueRepository.save(venue);
                 eventPublisher.publishEvent(new VenueUpdatedEvent(saved.getId()));
+                if (oldActive && !Boolean.TRUE.equals(saved.getActive())) {
+                        eventPublisher.publishEvent(new VenueDeactivatedEvent(saved.getId()));
+                }
                 return venueMapper.toVenueResponse(saved);
         }
 
@@ -144,10 +168,32 @@ public class VenueService {
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                                 "Venue not found with ID: " + id,
                                                 ErrorCode.VENUE_NOT_FOUND));
+                validateNoActiveBookingsForVenue(venue.getId(), venue.getName());
                 venue.setActive(false);
                 venueRepository.save(venue);
                 eventPublisher.publishEvent(new VenueUpdatedEvent(venue.getId()));
                 eventPublisher.publishEvent(new VenueDeactivatedEvent(venue.getId()));
+        }
+
+        private void validateNoActiveBookingsForVenue(UUID venueId, String venueName) {
+                List<Building> buildings = buildingRepository.findByVenueIdAndActiveTrue(venueId);
+                for (Building building : buildings) {
+                        List<Floor> floors = floorRepository.findByBuildingIdOrderByLevelNumberAsc(building.getId());
+                        for (Floor floor : floors) {
+                                List<Hall> halls = hallRepository.findByFloorIdAndActiveTrue(floor.getId());
+                                for (Hall hall : halls) {
+                                        List<Stall> stalls = stallRepository.findByHallIdAndActiveTrue(hall.getId());
+                                        for (Stall stall : stalls) {
+                                                List<EventStall> esList = eventStallRepository.findByStallIdAndActiveTrue(stall.getId());
+                                                for (EventStall es : esList) {
+                                                        if (es.getStatus() == AvailabilityStatus.BOOKED || es.getStatus() == AvailabilityStatus.BLOCKED) {
+                                                                throw new BusinessException("Cannot deactivate Venue " + venueName + " because stall " + stall.getName() + " is currently booked or blocked in an event.", ErrorCode.BUSINESS_RULE_VIOLATION);
+                                                        }
+                                                }
+                                        }
+                                }
+                        }
+                }
         }
 
         @Transactional(readOnly = true)
