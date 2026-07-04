@@ -1,6 +1,8 @@
 package com.bookfair.backend.config;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +20,8 @@ public class StripeProperties {
     public static class Api {
 
         @NotBlank(message = "Stripe API Key is missing!")
+        @ToString.Exclude
+        @EqualsAndHashCode.Exclude
         private String key;
     }
 
@@ -25,6 +29,8 @@ public class StripeProperties {
     public static class Webhook {
 
         @NotBlank(message = "Stripe Webhook Secret is missing!")
+        @ToString.Exclude
+        @EqualsAndHashCode.Exclude
         private String secret;
     }
 }
