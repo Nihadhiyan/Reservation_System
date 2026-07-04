@@ -34,6 +34,11 @@ import com.bookfair.backend.repository.VenueRepository;
 import com.bookfair.backend.event.user.UserUpdatedEvent;
 import com.bookfair.backend.event.cache.OrganizationUpdatedEvent;
 import com.bookfair.backend.event.cache.VenueUpdatedEvent;
+import com.bookfair.backend.event.hierarchy.VenueDeactivatedEvent;
+import com.bookfair.backend.event.hierarchy.EventDeactivatedEvent;
+import com.bookfair.backend.event.reservation.ReservationCancelledByAdminEvent;
+import com.bookfair.backend.repository.EventRepository;
+import com.bookfair.backend.repository.ReservationRepository;
 import com.bookfair.backend.service.NotificationService;
 
 import static java.util.Objects.requireNonNull;
@@ -51,6 +56,8 @@ public class NotificationEventListener {
     private final OrganizationMemberRepository memberRepository;
     private final OrganizationRepository organizationRepository;
     private final VenueRepository venueRepository;
+    private final EventRepository eventRepository;
+    private final ReservationRepository reservationRepository;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Async("taskExecutor")
@@ -194,6 +201,56 @@ public class NotificationEventListener {
                                         vars);
                             }
                         }
+                    }
+                });
+            }
+            case VenueDeactivatedEvent e -> {
+                venueRepository.findById(requireNonNull(e.venueId(), "Venue ID cannot be null")).ifPresent(venue -> {
+                    Organization owner = venue.getOwner();
+                    if (owner != null) {
+                        List<OrganizationMember> members = memberRepository.findByOrganizationId(owner.getId());
+                        for (OrganizationMember member : members) {
+                            if (member.getRole() == OrganizationRole.ORG_ADMIN && member.getUser() != null) {
+                                User admin = member.getUser();
+                                Map<String, Object> vars = Map.of(
+                                        "userName", admin.getUsername(),
+                                        "entityType", "Venue",
+                                        "alertMessage", "Your venue has been deactivated: " + venue.getName());
+                                notificationService.notify(admin.getEmail(), "Venue Deactivated Notice", "venue_deactivated", vars);
+                            }
+                        }
+                    }
+                });
+            }
+            case EventDeactivatedEvent e -> {
+                eventRepository.findById(requireNonNull(e.eventId(), "Event ID cannot be null")).ifPresent(ev -> {
+                    Organization organizer = ev.getOrganizer();
+                    if (organizer != null) {
+                        List<OrganizationMember> members = memberRepository.findByOrganizationId(organizer.getId());
+                        for (OrganizationMember member : members) {
+                            if (member.getRole() == OrganizationRole.ORG_ADMIN && member.getUser() != null) {
+                                User admin = member.getUser();
+                                Map<String, Object> vars = Map.of(
+                                        "userName", admin.getUsername(),
+                                        "eventName", ev.getName(),
+                                        "alertMessage", "Your event '" + ev.getName() + "' has been deactivated due to administrative action or venue closure.");
+                                notificationService.notify(admin.getEmail(), "Event Deactivated Notice", "event_deactivated", vars);
+                            }
+                        }
+                    }
+                });
+            }
+            case ReservationCancelledByAdminEvent e -> {
+                reservationRepository.findById(requireNonNull(e.reservationId(), "Reservation ID cannot be null")).ifPresent(res -> {
+                    User user = res.getUser();
+                    if (user != null) {
+                        Map<String, Object> vars = Map.of(
+                                "userName", user.getUsername(),
+                                "eventName", res.getEvent().getName(),
+                                "reservationId", res.getId().toString(),
+                                "reason", e.reason() != null ? e.reason() : "Administrative closure",
+                                "refundMessage", "Please note that if you made a payment for this reservation, a full refund is currently being processed to your original payment method.");
+                        notificationService.notify(user.getEmail(), "Reservation Cancellation Notice - Refund Initiated", "reservation_cancelled_admin", vars);
                     }
                 });
             }
