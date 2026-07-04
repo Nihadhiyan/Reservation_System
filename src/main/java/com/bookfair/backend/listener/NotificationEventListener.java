@@ -25,8 +25,15 @@ import com.bookfair.backend.event.reservation.ReservationExpiredEvent;
 import com.bookfair.backend.model.User;
 import com.bookfair.backend.model.User.SystemRole;
 import com.bookfair.backend.model.OrganizationMember;
+import com.bookfair.backend.model.Organization;
+import com.bookfair.backend.model.OrganizationMember.OrganizationRole;
 import com.bookfair.backend.repository.UserRepository;
 import com.bookfair.backend.repository.OrganizationMemberRepository;
+import com.bookfair.backend.repository.OrganizationRepository;
+import com.bookfair.backend.repository.VenueRepository;
+import com.bookfair.backend.event.user.UserUpdatedEvent;
+import com.bookfair.backend.event.cache.OrganizationUpdatedEvent;
+import com.bookfair.backend.event.cache.VenueUpdatedEvent;
 import com.bookfair.backend.service.NotificationService;
 
 import static java.util.Objects.requireNonNull;
@@ -42,6 +49,8 @@ public class NotificationEventListener {
     private final NotificationService notificationService;
     private final UserRepository userRepository;
     private final OrganizationMemberRepository memberRepository;
+    private final OrganizationRepository organizationRepository;
+    private final VenueRepository venueRepository;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Async("taskExecutor")
@@ -140,6 +149,53 @@ public class NotificationEventListener {
                 Map<String, Object> vars = Map.of(
                         "userName", e.username());
                 notificationService.notify(e.email(), "Email Verified", "email_verified", vars);
+            }
+            case UserUpdatedEvent e -> {
+                Map<String, Object> vars = Map.of(
+                        "userName", e.username(),
+                        "entityType", "User",
+                        "alertMessage", "Your user profile details have been updated.");
+                notificationService.notify(e.email(), "Profile Details Updated", "update_alert", vars);
+            }
+            case OrganizationUpdatedEvent e -> {
+                organizationRepository.findById(requireNonNull(e.organizationId(), "Organization ID cannot be null"))
+                        .ifPresent(org -> {
+                            List<OrganizationMember> members = memberRepository
+                                    .findByOrganizationId(requireNonNull(org.getId()));
+                            for (OrganizationMember member : members) {
+                                if (member.getRole() == OrganizationRole.ORG_ADMIN && member.getUser() != null) {
+                                    User admin = member.getUser();
+                                    Map<String, Object> vars = Map.of(
+                                            "userName", admin.getUsername(),
+                                            "entityType", "Organization",
+                                            "alertMessage",
+                                            "Your organization profile or capabilities have been updated: "
+                                                    + org.getName());
+                                    notificationService.notify(admin.getEmail(), "Organization Profile Updated",
+                                            "update_alert",
+                                            vars);
+                                }
+                            }
+                        });
+            }
+            case VenueUpdatedEvent e -> {
+                venueRepository.findById(requireNonNull(e.venueId(), "Venue ID cannot be null")).ifPresent(venue -> {
+                    Organization owner = venue.getOwner();
+                    if (owner != null) {
+                        List<OrganizationMember> members = memberRepository.findByOrganizationId(owner.getId());
+                        for (OrganizationMember member : members) {
+                            if (member.getRole() == OrganizationRole.ORG_ADMIN && member.getUser() != null) {
+                                User admin = member.getUser();
+                                Map<String, Object> vars = Map.of(
+                                        "userName", admin.getUsername(),
+                                        "entityType", "Venue",
+                                        "alertMessage", "Your venue details have been updated: " + venue.getName());
+                                notificationService.notify(admin.getEmail(), "Venue Details Updated", "update_alert",
+                                        vars);
+                            }
+                        }
+                    }
+                });
             }
             default -> {
                 log.debug("Ignored event type in notification listener: {}", event.getClass().getSimpleName());
