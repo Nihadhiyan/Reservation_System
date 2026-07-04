@@ -4,13 +4,15 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
+import com.bookfair.backend.converter.PiiEncryptionConverter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import java.io.Serializable;
 import java.util.UUID;
 
 @Entity
@@ -20,9 +22,11 @@ import java.util.UUID;
 })
 @Getter
 @Setter
+@ToString
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @AllArgsConstructor
-public class User extends BaseEntity implements Serializable {
+public class User extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -42,6 +46,8 @@ public class User extends BaseEntity implements Serializable {
     @Column(nullable = false)
     @NotBlank(message = "Password is required")
     @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private String password;
 
     @Enumerated(EnumType.STRING)
@@ -49,9 +55,15 @@ public class User extends BaseEntity implements Serializable {
     private SystemRole systemRole = SystemRole.CUSTOMER;
 
     @Column(name = "contact_number")
+    @Convert(converter = PiiEncryptionConverter.class)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private String contactNumber;
 
     @Column(name = "address")
+    @Convert(converter = PiiEncryptionConverter.class)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private String address;
 
     @Column(name = "active", nullable = false)

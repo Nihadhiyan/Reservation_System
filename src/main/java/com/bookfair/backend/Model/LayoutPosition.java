@@ -1,5 +1,6 @@
 package com.bookfair.backend.model;
 
+import java.io.Serializable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import jakarta.validation.constraints.Min;
@@ -8,12 +9,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+// Implements Serializable for Redis caching compatibility
 @Embeddable
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class LayoutPosition {
+public class LayoutPosition implements Serializable {
 
     @Column(name = "x_coord", nullable = false)
     @Min(value = 0, message = "X coordinate must be non-negative")

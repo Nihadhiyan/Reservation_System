@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.io.Serializable;
 import java.util.UUID;
 
 @Entity
@@ -18,7 +17,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrganizationMember extends BaseEntity implements Serializable {
+public class OrganizationMember extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

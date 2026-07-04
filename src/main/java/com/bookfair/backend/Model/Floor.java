@@ -3,7 +3,6 @@ package com.bookfair.backend.model;
 import java.util.List;
 import java.util.UUID;
 
-
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -29,18 +28,11 @@ import lombok.Setter;
 import lombok.ToString;
 
 @Entity
-@Table (
-    name = "floors",
-    indexes = {
+@Table(name = "floors", indexes = {
         @Index(name = "idx_floor_building", columnList = "building_id")
-    },
-    uniqueConstraints = {
-        @UniqueConstraint(
-            name = "uk_floor_building_level",
-            columnNames = {"building_id", "level_number"}
-        )
-    }
-)
+}, uniqueConstraints = {
+        @UniqueConstraint(name = "uk_floor_building_level", columnNames = { "building_id", "level_number" })
+})
 @Getter
 @Setter
 @AllArgsConstructor
@@ -66,9 +58,12 @@ public class Floor extends BaseEntity {
     @EqualsAndHashCode.Exclude
     private Building building;
 
+    @Column(name = "active", nullable = false)
+    private Boolean active = true;
+
     @OneToMany(mappedBy = "floor", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    @OrderBy("levelNumber ASC")
+    @OrderBy("name ASC")
     private List<Hall> halls;
 }

@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.io.Serializable;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -21,7 +20,7 @@ import com.bookfair.backend.model.OrganizationMember.OrganizationRole;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrganizationInvite extends BaseEntity implements Serializable {
+public class OrganizationInvite extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

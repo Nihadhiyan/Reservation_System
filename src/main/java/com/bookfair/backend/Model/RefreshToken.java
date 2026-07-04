@@ -15,7 +15,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.io.Serializable;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
@@ -23,9 +22,12 @@ import java.util.UUID;
 /**
  * Enterprise Stateful Session Entity (RefreshToken).
  * <p>
- * This entity stores granular user device sessions. By tracking each issued refresh token
- * alongside device metadata (IP address and User-Agent), security analysts can detect
- * anomalous login patterns or compromised devices, and users/admins can perform targeted
+ * This entity stores granular user device sessions. By tracking each issued
+ * refresh token
+ * alongside device metadata (IP address and User-Agent), security analysts can
+ * detect
+ * anomalous login patterns or compromised devices, and users/admins can perform
+ * targeted
  * single-device logouts (session revocations).
  * </p>
  */
@@ -38,9 +40,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class RefreshToken extends BaseEntity implements Serializable {
-
-    private static final long serialVersionUID = 1L;
+public class RefreshToken extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -48,7 +48,8 @@ public class RefreshToken extends BaseEntity implements Serializable {
 
     /**
      * The cryptographically secure refresh token string (or JWT).
-     * Indexed and unique to ensure fast O(1) lookups during the /refresh-token flow.
+     * Indexed and unique to ensure fast O(1) lookups during the /refresh-token
+     * flow.
      */
     @Column(name = "token", nullable = false, unique = true, length = 512)
     private String token;
@@ -83,7 +84,8 @@ public class RefreshToken extends BaseEntity implements Serializable {
     private String deviceInfo;
 
     /**
-     * Validates whether this token session has expired relative to the current UTC instant.
+     * Validates whether this token session has expired relative to the current UTC
+     * instant.
      *
      * @return true if the token is expired, false otherwise.
      */

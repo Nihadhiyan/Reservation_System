@@ -10,22 +10,15 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-
 import java.util.UUID;
 
+// Implements Serializable explicitly for Redis caching compatibility
 @Entity
-@Table(
-    name = "stalls",
-    indexes = {
+@Table(name = "stalls", indexes = {
         @Index(name = "idx_stall_hall", columnList = "hall_id")
-    },
-    uniqueConstraints = {
-        @UniqueConstraint (
-            name = "uk_stall_name_hall",
-            columnNames = {"hall_id", "name"}
-        )
-    }
-)
+}, uniqueConstraints = {
+        @UniqueConstraint(name = "uk_stall_name_hall", columnNames = { "hall_id", "name" })
+})
 @Setter
 @Getter
 @NoArgsConstructor
@@ -52,10 +45,10 @@ public class Stall extends BaseEntity {
 
     @Embedded
     @AttributeOverrides({
-        @AttributeOverride(name = "xCoord", column = @Column(name = "stall_x_coord")),
-        @AttributeOverride(name = "yCoord", column = @Column(name = "stall_y_coord")),
-        @AttributeOverride(name = "width", column = @Column(name = "stall_width")),
-        @AttributeOverride(name = "height", column = @Column(name = "stall_height"))
+            @AttributeOverride(name = "xCoord", column = @Column(name = "stall_x_coord")),
+            @AttributeOverride(name = "yCoord", column = @Column(name = "stall_y_coord")),
+            @AttributeOverride(name = "width", column = @Column(name = "stall_width")),
+            @AttributeOverride(name = "height", column = @Column(name = "stall_height"))
     })
     private LayoutPosition layout;
 

@@ -1,5 +1,6 @@
 package com.bookfair.backend.model;
 
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -16,11 +17,12 @@ import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.Setter;
 
+// Implements Serializable so all extending JPA entities can be cleanly serialized to Redis
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
-public abstract class BaseEntity {
+public abstract class BaseEntity implements Serializable {
 
     @Version
     private Long version;

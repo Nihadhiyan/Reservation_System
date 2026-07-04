@@ -20,11 +20,15 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Convert;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
+import com.bookfair.backend.converter.PiiEncryptionConverter;
 
 @Entity
 @Table(
@@ -35,9 +39,10 @@ import lombok.Setter;
 )
 @Getter
 @Setter
+@ToString
+@EqualsAndHashCode(callSuper = true)
 @AllArgsConstructor
 @NoArgsConstructor
-
 public class Organization extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -47,12 +52,20 @@ public class Organization extends BaseEntity {
     private String name;
 
     @Column(name = "contact_number")
+    @Convert(converter = PiiEncryptionConverter.class)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private String contactNumber;
 
     @Column(name = "contact_email")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private String contactEmail;
 
     @Column(name = "billing_address")
+    @Convert(converter = PiiEncryptionConverter.class)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private String billingAddress;
  
     @ElementCollection(targetClass = OrganizationCapability.class, fetch = FetchType.EAGER)
