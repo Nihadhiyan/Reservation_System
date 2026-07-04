@@ -3,6 +3,7 @@ package com.bookfair.backend.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,9 @@ import com.bookfair.backend.model.Organization;
 import com.bookfair.backend.model.Venue;
 import com.bookfair.backend.repository.OrganizationRepository;
 import com.bookfair.backend.repository.VenueRepository;
+import org.springframework.context.ApplicationEventPublisher;
+import com.bookfair.backend.event.hierarchy.VenueDeactivatedEvent;
+import com.bookfair.backend.event.cache.VenueUpdatedEvent;
 
 import static java.util.Objects.requireNonNull;
 
@@ -34,6 +38,7 @@ public class VenueService {
         private final OrganizationRepository organizationRepository;
         private final VenueMapper venueMapper;
         private final BuildingMapper buildingMapper;
+        private final ApplicationEventPublisher eventPublisher;
 
         @Transactional
         public VenueResponse createVenue(CreateVenueRequest request) {
@@ -60,7 +65,9 @@ public class VenueService {
                 venue.setOwner(owner);
                 venue.setPartners(partners);
 
-                return venueMapper.toVenueResponse(venueRepository.save(venue));
+                Venue saved = venueRepository.save(venue);
+                eventPublisher.publishEvent(new VenueUpdatedEvent(saved.getId()));
+                return venueMapper.toVenueResponse(saved);
         }
 
         @Transactional(readOnly = true)
@@ -69,6 +76,7 @@ public class VenueService {
                                 .map(venueMapper::toVenueResponse);
         }
 
+        @Cacheable(value = "venues")
         @Transactional(readOnly = true)
         public List<VenueResponse> getAllVenues() {
                 return venueRepository.findAll().stream()
@@ -86,6 +94,7 @@ public class VenueService {
                 return venueMapper.toVenueResponse(venue);
         }
 
+        @Cacheable(value = "venueMap", key = "#id")
         @Transactional(readOnly = true)
         public VenueMapResponse getVenueMap(UUID id) {
                 Venue venue = venueRepository.findDetailedById(requireNonNull(id))
@@ -124,7 +133,9 @@ public class VenueService {
                 venue.setOwner(owner);
                 venue.setPartners(partners);
 
-                return venueMapper.toVenueResponse(venueRepository.save(venue));
+                Venue saved = venueRepository.save(venue);
+                eventPublisher.publishEvent(new VenueUpdatedEvent(saved.getId()));
+                return venueMapper.toVenueResponse(saved);
         }
 
         @Transactional
@@ -135,6 +146,8 @@ public class VenueService {
                                                 ErrorCode.VENUE_NOT_FOUND));
                 venue.setActive(false);
                 venueRepository.save(venue);
+                eventPublisher.publishEvent(new VenueUpdatedEvent(venue.getId()));
+                eventPublisher.publishEvent(new VenueDeactivatedEvent(venue.getId()));
         }
 
         @Transactional(readOnly = true)

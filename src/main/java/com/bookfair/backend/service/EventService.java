@@ -3,6 +3,8 @@ package com.bookfair.backend.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.cache.annotation.Cacheable;
+import com.bookfair.backend.event.cache.EventUpdatedEvent;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -49,6 +51,8 @@ public class EventService {
         private final EventMapper eventMapper;
         private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
+        // Cache upcoming events list to optimize high-traffic landing page requests
+        @Cacheable(value = "events", key = "'upcoming'")
         @Transactional(readOnly = true)
         public List<EventResponse> getUpcomingEvents() {
                 return eventRepository.findByStatusAndActiveTrue(EventStatus.UPCOMING).stream()
@@ -56,6 +60,8 @@ public class EventService {
                                 .toList();
         }
 
+        // Cache paginated event catalog queries
+        @Cacheable(value = "events", key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort")
         @Transactional(readOnly = true)
         public Page<EventResponse> getAllEvents(Pageable pageable) {
                 requireNonNull(pageable, "pageable cannot be null");
@@ -63,6 +69,8 @@ public class EventService {
                                 .map(eventMapper::toEventResponse);
         }
 
+        // Cache individual event details by ID
+        @Cacheable(value = "events", key = "#id")
         @Transactional(readOnly = true)
         public EventResponse getEventById(UUID id) {
                 Event event = eventRepository.findByIdAndActiveTrue(id)
@@ -112,8 +120,12 @@ public class EventService {
                                 : List.of();
 
                 Event event = eventMapper.toEvent(request, organizer, venue, partners);
+                Event savedEvent = eventRepository.save(requireNonNull(event));
 
-                return eventMapper.toEventResponse(eventRepository.save(requireNonNull(event)));
+                // Publish event to trigger AFTER_COMMIT cache eviction
+                eventPublisher.publishEvent(new EventUpdatedEvent(savedEvent.getId()));
+
+                return eventMapper.toEventResponse(savedEvent);
         }
 
         @Transactional
@@ -171,7 +183,12 @@ public class EventService {
                 event.setVenue(venue);
                 event.setPartners(partners);
 
-                return eventMapper.toEventResponse(eventRepository.save(event));
+                Event updatedEvent = eventRepository.save(event);
+
+                // Publish event to trigger AFTER_COMMIT cache eviction
+                eventPublisher.publishEvent(new EventUpdatedEvent(updatedEvent.getId()));
+
+                return eventMapper.toEventResponse(updatedEvent);
         }
 
         @Transactional
@@ -197,6 +214,9 @@ public class EventService {
 
                 event.setActive(false);
                 eventRepository.save(event);
+
+                // Publish event to trigger AFTER_COMMIT cache eviction
+                eventPublisher.publishEvent(new EventUpdatedEvent(event.getId()));
         }
 
         @Transactional
@@ -216,7 +236,8 @@ public class EventService {
                                         eventInstance.getId(),
                                         oldStatus,
                                         newStatus.name()));
-
+                        // Publish event to trigger AFTER_COMMIT cache eviction
+                        eventPublisher.publishEvent(new EventUpdatedEvent(eventInstance.getId()));
                 }
         }
 

@@ -8,6 +8,8 @@ import com.bookfair.backend.repository.StallRepository;
 import com.bookfair.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import com.bookfair.backend.event.audit.SecurityAuditEvent;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,10 +28,12 @@ public class AdminService {
     private final StallRepository stallRepository;
     private final ReservationRepository reservationRepository;
     private final AdminMapper adminMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     // AtomicBoolean - thread safety (without needing a database table)
     private final AtomicBoolean maintenanceMode = new AtomicBoolean(false);
 
+    // Read-only transaction for real-time dashboard metrics calculation
     @Transactional(readOnly = true)
     public AdminDashboardResponse getDashboardStats() {
         long totalUsers = userRepository.countByActiveTrue();
@@ -52,7 +56,7 @@ public class AdminService {
         boolean currentMode = this.maintenanceMode.get();
         this.maintenanceMode.set(!currentMode);
 
-        log.info("System maintenance mode toggled to: {}", this.maintenanceMode.get());
+        eventPublisher.publishEvent(new SecurityAuditEvent("TOGGLE_MAINTENANCE_MODE", "SUPER_ADMIN", "System maintenance mode toggled to: " + this.maintenanceMode.get(), Instant.now()));
     }
 
     public boolean isMaintenanceMode() {

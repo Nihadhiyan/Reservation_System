@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +35,8 @@ import com.bookfair.backend.repository.UserRepository;
 import com.bookfair.backend.repository.OrganizationMemberRepository;
 import com.bookfair.backend.event.organization.OrganizationDeactivatedEvent;
 import com.bookfair.backend.event.organization.OrganizationCapabilityChangedEvent;
+import com.bookfair.backend.event.cache.OrganizationUpdatedEvent;
+import com.bookfair.backend.event.audit.SecurityAuditEvent;
 import static java.util.Objects.requireNonNull;
 
 import lombok.RequiredArgsConstructor;
@@ -48,6 +51,9 @@ public class OrganizationService {
     private final OrganizationMapper organizationMapper;
     private final ApplicationEventPublisher applicationEventPublisher;
 
+    // Cache organization lists by page parameters to optimize read-heavy directory
+    // queries
+    @Cacheable(value = "organizations", key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort")
     @Transactional(readOnly = true)
     public Page<OrganizationResponse> getAllOrganizations(Pageable pageable) {
         requireNonNull(pageable, "pageable cannot be null");
@@ -55,6 +61,8 @@ public class OrganizationService {
                 .map(organizationMapper::toOrganizationResponse);
     }
 
+    // Cache organization profile lookups by ID
+    @Cacheable(value = "organizations", key = "#id")
     @Transactional(readOnly = true)
     public OrganizationResponse getOrganizationById(UUID id) {
         Organization organization = organizationRepository.findByIdAndActiveTrue(requireNonNull(id))
@@ -74,6 +82,9 @@ public class OrganizationService {
 
         Organization organization = organizationMapper.toOrganizationFromCreateOrganizationRequest(request);
         Organization savedOrganization = organizationRepository.save(requireNonNull(organization));
+
+        // Publish event to trigger AFTER_COMMIT cache eviction
+        applicationEventPublisher.publishEvent(new OrganizationUpdatedEvent(savedOrganization.getId()));
 
         return organizationMapper.toOrganizationResponse(savedOrganization);
     }
@@ -116,6 +127,9 @@ public class OrganizationService {
                             requireNonNull(organization.getCapabilities())));
         }
 
+        // Publish event to trigger AFTER_COMMIT cache eviction
+        applicationEventPublisher.publishEvent(new OrganizationUpdatedEvent(updatedOrganization.getId()));
+
         return organizationMapper.toOrganizationResponse(updatedOrganization);
     }
 
@@ -140,6 +154,11 @@ public class OrganizationService {
         softDelete(organization);
 
         publishOrganizationDeactivatedEvent(organization.getId());
+        // Publish event to trigger AFTER_COMMIT cache eviction
+        applicationEventPublisher.publishEvent(new OrganizationUpdatedEvent(organization.getId()));
+        applicationEventPublisher.publishEvent(new SecurityAuditEvent("DEACTIVATE_ORGANIZATION",
+                requestingUser != null ? requestingUser.getUsername() : "SYSTEM",
+                "Deactivated organization: " + organization.getName(), Instant.now()));
     }
 
     private UUID getCurrentUserId() {

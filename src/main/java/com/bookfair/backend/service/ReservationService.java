@@ -218,10 +218,20 @@ public class ReservationService {
                         throw new ForbiddenException("You cannot cancel this reservation.", ErrorCode.FORBIDDEN);
                 }
 
-                if (!reservation.getStatus().equals(ReservationStatus.CONFIRMED)
-                                && !reservation.getStatus().equals(ReservationStatus.PENDING)) {
+                if (reservation.getStatus() == ReservationStatus.PENDING) {
+                        reservation.setStatus(ReservationStatus.CANCELLED);
+                        for (ReservationStall rs : reservation.getReservedStalls()) {
+                                EventStall stall = rs.getEventStall();
+                                stall.setStatus(AvailabilityStatus.AVAILABLE);
+                                eventStallRepository.save(stall);
+                        }
+                        reservationRepository.save(reservation);
+                        return;
+                }
+
+                if (!reservation.getStatus().equals(ReservationStatus.CONFIRMED)) {
                         throw new BusinessException(
-                                        "Only confirmed or pending reservations can be cancelled for a refund.",
+                                        "Only confirmed or pending reservations can be cancelled.",
                                         ErrorCode.REFUND_FAILED);
                 }
 

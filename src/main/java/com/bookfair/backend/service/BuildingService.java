@@ -20,6 +20,8 @@ import com.bookfair.backend.model.Venue;
 import com.bookfair.backend.repository.BuildingRepository;
 import com.bookfair.backend.repository.FloorRepository;
 import com.bookfair.backend.repository.VenueRepository;
+import org.springframework.context.ApplicationEventPublisher;
+import com.bookfair.backend.event.hierarchy.BuildingDeactivatedEvent;
 
 import lombok.RequiredArgsConstructor;
 import static java.util.Objects.requireNonNull;
@@ -33,6 +35,7 @@ public class BuildingService {
     private final FloorRepository floorRepository;
     private final BuildingMapper buildingMapper;
     private final FloorMapper floorMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public BuildingResponse createBuilding(CreateBuildingRequest request) {
@@ -81,6 +84,7 @@ public class BuildingService {
 
         building.setActive(false);
         buildingRepository.save(building);
+        eventPublisher.publishEvent(new BuildingDeactivatedEvent(building.getId()));
     }
 
     @Transactional(readOnly = true)

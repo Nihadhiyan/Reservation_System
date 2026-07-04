@@ -25,6 +25,11 @@ import com.bookfair.backend.model.Stall;
 import com.bookfair.backend.repository.FloorRepository;
 import com.bookfair.backend.repository.HallRepository;
 import com.bookfair.backend.repository.StallRepository;
+import org.springframework.context.ApplicationEventPublisher;
+import com.bookfair.backend.event.hierarchy.HallDeactivatedEvent;
+import com.bookfair.backend.event.cache.HallUpdatedEvent;
+import com.bookfair.backend.event.layout.HallDimensionsChangedEvent;
+import java.util.Objects;
 import static java.util.Objects.requireNonNull;
 
 import lombok.RequiredArgsConstructor;
@@ -40,6 +45,7 @@ public class HallService {
         private final StallMapper stallMapper;
         private final LayoutGenerationService layoutGenerationService;
         private final CommonMapper commonMapper;
+        private final ApplicationEventPublisher eventPublisher;
 
         @Transactional
         public HallResponse createHall(CreateHallRequest request) {
@@ -79,6 +85,9 @@ public class HallService {
                                 .orElseThrow(() -> new ResourceNotFoundException("Hall not found",
                                                 ErrorCode.HALL_NOT_FOUND));
 
+                Integer oldWidth = (hall.getLayout() != null) ? hall.getLayout().getWidth() : null;
+                Integer oldHeight = (hall.getLayout() != null) ? hall.getLayout().getHeight() : null;
+
                 Floor floor = floorRepository.findById(requireNonNull(request.getFloorId()))
                                 .orElseThrow(() -> new ResourceNotFoundException("Floor not found",
                                                 ErrorCode.VENUE_NOT_FOUND));
@@ -98,6 +107,14 @@ public class HallService {
                 hall.setFloor(floor);
 
                 Hall saved = hallRepository.save(hall);
+                eventPublisher.publishEvent(new HallUpdatedEvent(saved.getId()));
+
+                Integer newWidth = (saved.getLayout() != null) ? saved.getLayout().getWidth() : null;
+                Integer newHeight = (saved.getLayout() != null) ? saved.getLayout().getHeight() : null;
+                if (newWidth != null && newHeight != null && (!Objects.equals(oldWidth, newWidth) || !Objects.equals(oldHeight, newHeight))) {
+                        eventPublisher.publishEvent(new HallDimensionsChangedEvent(saved.getId(), newWidth, newHeight));
+                }
+
                 return hallMapper.toHallResponse(saved);
         }
 
@@ -109,6 +126,7 @@ public class HallService {
 
                 hall.setActive(false);
                 hallRepository.save(hall);
+                eventPublisher.publishEvent(new HallDeactivatedEvent(hall.getId()));
         }
 
         @Transactional(readOnly = true)

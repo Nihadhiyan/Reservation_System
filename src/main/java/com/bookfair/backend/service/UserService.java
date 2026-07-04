@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +21,7 @@ import com.bookfair.backend.dto.user.request.UpdateUserRoleRequest;
 import com.bookfair.backend.dto.user.response.UserResponse;
 import com.bookfair.backend.event.user.UserUpdatedEvent;
 import com.bookfair.backend.event.user.UserRoleUpdatedEvent;
+import com.bookfair.backend.event.audit.SecurityAuditEvent;
 import com.bookfair.backend.exception.BusinessException;
 import com.bookfair.backend.exception.DuplicateResourceException;
 import com.bookfair.backend.exception.ErrorCode;
@@ -45,6 +47,8 @@ public class UserService {
         private final ReservationMapper reservationMapper;
         private final ApplicationEventPublisher eventPublisher;
 
+        // Cache user profile lookups by user ID
+        @Cacheable(value = "userProfiles", key = "#userId")
         @Transactional(readOnly = true)
         public UserResponse getUserProfile(UUID userId) {
                 requireNonNull(userId, "userId cannot be null");
@@ -56,6 +60,8 @@ public class UserService {
                 return userMapper.toUserResponse(user);
         }
 
+        // Cache user profile lookups by username
+        @Cacheable(value = "userProfiles", key = "#username")
         @Transactional(readOnly = true)
         public UserResponse getMyProfile(String username) {
                 User user = userRepository.findByUsernameAndActiveTrue(requireNonNull(username))
@@ -125,7 +131,6 @@ public class UserService {
                 }
 
                 softDelete(targetUser);
-
         }
 
         @Transactional
@@ -142,7 +147,6 @@ public class UserService {
                 }
 
                 softDelete(user);
-
         }
 
         @Transactional(readOnly = true)
@@ -215,6 +219,8 @@ public class UserService {
                                 requireNonNull(savedUser.getEmail()),
                                 requireNonNull(newRole.name()),
                                 requireNonNull(oldRole.name())));
+                eventPublisher.publishEvent(new SecurityAuditEvent("SET_ROLE", requestingUser.getUsername(), "Role updated to " + newRole.name() + " for user " + savedUser.getUsername(), Instant.now()));
+                publishUserUpdatedEvent(savedUser);
         }
 
         private UUID getCurrentUserId() {
@@ -250,6 +256,7 @@ public class UserService {
                 userRepository.save(user);
                 eventPublisher.publishEvent(new UserDeletedEvent(requireNonNull(user.getId()),
                                 requireNonNull(user.getUsername()), requireNonNull(user.getEmail())));
+                publishUserUpdatedEvent(user);
         }
 
         private void publishUserUpdatedEvent(User user) {

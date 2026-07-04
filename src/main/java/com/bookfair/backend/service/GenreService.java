@@ -5,12 +5,15 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.bookfair.backend.dto.genre.mapper.GenreMapper;
 import com.bookfair.backend.dto.genre.request.CreateGenreRequest;
 import com.bookfair.backend.dto.genre.response.GenreResponse;
+import com.bookfair.backend.event.cache.GenreUpdatedEvent;
 import com.bookfair.backend.exception.BusinessException;
 import com.bookfair.backend.exception.ErrorCode;
 import com.bookfair.backend.exception.ResourceNotFoundException;
@@ -27,7 +30,9 @@ public class GenreService {
 
     private final GenreRepository genreRepository;
     private final GenreMapper genreMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
+    @Cacheable(value = "genres")
     @Transactional(readOnly = true)
     public List<GenreResponse> getAllGenres() {
         return genreRepository.findByActiveTrue().stream()
@@ -44,6 +49,7 @@ public class GenreService {
         Genre genre = genreMapper.toGenre(request);
 
         Genre saved = genreRepository.save(Objects.requireNonNull(genre));
+        eventPublisher.publishEvent(new GenreUpdatedEvent(saved.getId()));
         log.info("Created new genre: {}", saved.getName());
 
         return genreMapper.toGenreResponse(saved);
@@ -56,6 +62,7 @@ public class GenreService {
 
         genre.setActive(false);
         genreRepository.save(genre);
+        eventPublisher.publishEvent(new GenreUpdatedEvent(genreId));
         log.info("Soft deleted genre: {}", genreId);
     }
 }

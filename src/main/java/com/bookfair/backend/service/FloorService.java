@@ -20,6 +20,8 @@ import com.bookfair.backend.model.Floor;
 import com.bookfair.backend.repository.BuildingRepository;
 import com.bookfair.backend.repository.FloorRepository;
 import com.bookfair.backend.repository.HallRepository;
+import org.springframework.context.ApplicationEventPublisher;
+import com.bookfair.backend.event.hierarchy.FloorDeactivatedEvent;
 import static java.util.Objects.requireNonNull;
 
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ public class FloorService {
     private final HallRepository hallRepository;
     private final FloorMapper floorMapper;
     private final HallMapper hallMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public FloorResponse createFloor(CreateFloorRequest request) {
@@ -41,6 +44,7 @@ public class FloorService {
                 .orElseThrow(() -> new ResourceNotFoundException("Building not found", ErrorCode.VENUE_NOT_FOUND));
 
         Floor floor = floorMapper.toFloor(request, building);
+        floor.setActive(true);
 
         Floor saved = floorRepository.save(requireNonNull(floor));
         return floorMapper.toFloorResponse(saved);
@@ -75,7 +79,9 @@ public class FloorService {
         Floor floor = floorRepository.findById(requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Floor not found", ErrorCode.VENUE_NOT_FOUND));
 
-        floorRepository.delete(requireNonNull(floor));
+        floor.setActive(false);
+        floorRepository.save(floor);
+        eventPublisher.publishEvent(new FloorDeactivatedEvent(floor.getId()));
     }
 
     @Transactional(readOnly = true)
