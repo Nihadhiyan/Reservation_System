@@ -1,10 +1,28 @@
 # Reservation System — Backend
 
+This repository contains the Spring Boot API and event-driven architecture for the Reservation System venue & stall reservation system.
+
 A Spring Boot backend for managing venues, halls, floor layouts, and stall reservations — from stall/pricing setup to reservation, payment (Stripe), settlement, and notifications.
 
 ## Architecture
 
-![Reservation System architecture](https://claude.ai/chat/docs/architecture.svg)
+```
+flowchart LR
+    FE["React frontend<br/>Vite, Zustand, Tailwind"]
+    API["Spring Boot API<br/>Event-driven, JWT secured"]
+    DB[("PostgreSQL<br/>Flyway migrations")]
+    CACHE[("Redis<br/>Read cache")]
+    STRIPE["Stripe<br/>Payments, refunds"]
+    SMTP["SMTP<br/>Email notifications"]
+
+    FE -- REST --> API
+    API --> DB
+    API --> CACHE
+    STRIPE --> API
+    SMTP --> API
+```
+
+The React frontend talks to this API over REST; the API is backed by PostgreSQL (with Flyway-managed migrations) and Redis for caching, and integrates with Stripe for payments and SMTP for transactional email.
 
 ## Tech Stack
 
@@ -69,19 +87,41 @@ src/main/resources/
 
 All endpoints are versioned under `/api/v1` (except Stripe webhooks under `/api/payments`).
 
-| Base path                                                                                  | Responsibility                                                        |
-| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| `/api/v1/auth`                                                                             | Register, login, refresh, email verification, password reset (public) |
-| `/api/v1/users`                                                                            | User profile and account management                                   |
-| `/api/v1/organizations`, `/api/organizations/invites`                                      | Organizations, membership, invites                                    |
-| `/api/v1/venues`, `/api/v1/buildings`, `/api/v1/floors`, `/api/v1/halls`, `/api/v1/stalls` | Venue hierarchy CRUD                                                  |
-| `/api/v1/layout`, `/api/v1/layout-markers`                                                 | Floor-plan layout and stall grid generation                           |
-| `/api/v1/events`, `/api/v1/event-stalls`                                                   | Events and per-event stall configuration                              |
-| `/api/v1/genres`                                                                           | Book genre management                                                 |
-| `/api/v1/pricing`                                                                          | Pricing rules and price breakdown calculation                         |
-| `/api/v1/reservations`                                                                     | Stall reservations                                                    |
-| `/api/v1/payments`, `/api/payments` (webhook)                                              | Payment processing and Stripe webhooks                                |
-| `/api/v1/admin`                                                                            | Admin dashboard and system configuration                              |
+Base path
+Responsibility
+
+`/api/v1/auth`
+Register, login, refresh, email verification, password reset (public)
+
+`/api/v1/users`
+User profile and account management
+
+`/api/v1/organizations`, `/api/organizations/invites`
+Organizations, membership, invites
+
+`/api/v1/venues`, `/api/v1/buildings`, `/api/v1/floors`, `/api/v1/halls`, `/api/v1/stalls`
+Venue hierarchy CRUD
+
+`/api/v1/layout`, `/api/v1/layout-markers`
+Floor-plan layout and stall grid generation
+
+`/api/v1/events`, `/api/v1/event-stalls`
+Events and per-event stall configuration
+
+`/api/v1/genres`
+Book genre management
+
+`/api/v1/pricing`
+Pricing rules and price breakdown calculation
+
+`/api/v1/reservations`
+Stall reservations
+
+`/api/v1/payments`, `/api/payments` (webhook)
+Payment processing and Stripe webhooks
+
+`/api/v1/admin`
+Admin dashboard and system configuration
 
 Auth endpoints and `/actuator/health` are public; all other endpoints require a valid JWT, and `/actuator/**` (beyond health) requires the `SUPER_ADMIN` role.
 
@@ -99,7 +139,7 @@ Auth endpoints and `/actuator/health` are public; all other endpoints require a 
 
 The app reads configuration from environment variables, with dev-friendly defaults in `application.properties` / `application-dev.properties`. At minimum, set:
 
-```bash
+```
 export JWT_SECRET=your-jwt-secret
 export STRIPE_SECRET_KEY=sk_test_...
 export STRIPE_WEBHOOK_SECRET=whsec_...
@@ -108,19 +148,35 @@ export SMTP_PW=your-gmail-app-password
 
 Optional overrides (defaults shown):
 
-| Variable                             | Default                 | Purpose                                                         |
-| ------------------------------------ | ----------------------- | --------------------------------------------------------------- |
-| `SPRING_PROFILES_ACTIVE`             | `dev`                   | Active Spring profile (`dev` / `prod`)                          |
-| `DB_URL` / `DB_USER` / `DB_PASSWORD` | H2 in-memory            | Database connection (use PostgreSQL for `prod`)                 |
-| `CORS_ORIGINS`                       | `http://localhost:5173` | Allowed frontend origin(s)                                      |
-| `PII_SECRET_KEY`                     | dev default             | Key for encrypting PII fields — override in any real deployment |
-| `H2_CONSOLE_ENABLED`                 | `true` (dev)            | Toggle the H2 web console at `/h2-console`                      |
+Variable
+Default
+Purpose
+
+`SPRING_PROFILES_ACTIVE`
+`dev`
+Active Spring profile (`dev` / `prod`)
+
+`DB_URL` / `DB_USER` / `DB_PASSWORD`
+H2 in-memory
+Database connection (use PostgreSQL for `prod`)
+
+`CORS_ORIGINS`
+`http://localhost:5173`
+Allowed frontend origin(s)
+
+`PII_SECRET_KEY`
+dev default
+Key for encrypting PII fields — override in any real deployment
+
+`H2_CONSOLE_ENABLED`
+`true` (dev)
+Toggle the H2 web console at `/h2-console`
 
 The `prod` profile enforces SSL on the database connection, disables the H2 console, and disables SQL logging.
 
 ### Running Locally
 
-```bash
+```
 # Start Redis (example using Docker)
 docker run -d -p 6379:6379 redis
 
@@ -132,7 +188,7 @@ The API will be available at `http://localhost:4000`.
 
 ### Running Tests
 
-```bash
+```
 ./mvnw test
 ```
 
